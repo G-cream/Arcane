@@ -3,3 +3,7 @@
 ################################################################################
 
 /.vs
+/WebServer/VisualGDB/Debug/CodeDB/WebServer
+/WebServer/.vs/WebServer/v15
+/WebServer/WebServer/WebServer-Debug.vgdbsettings
+/WebServer/WebServer/WebServer-Release.vgdbsettings
