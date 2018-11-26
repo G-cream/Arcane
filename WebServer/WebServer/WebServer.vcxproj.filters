@@ -18,14 +18,48 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="WebServer.c">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <None Include="WebServer-Debug.vgdbsettings">
       <Filter>VisualGDB settings</Filter>
     </None>
     <None Include="WebServer-Release.vgdbsettings">
       <Filter>VisualGDB settings</Filter>
     </None>
+    <ClCompile Include="sws.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="server.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="sws.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="parser.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="connection.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="server.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="util.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="parser.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="connection.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
