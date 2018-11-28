@@ -16,8 +16,7 @@ set_sws_ipaddress(struct swsstate *stat, char *ipaddress)
 	if (ipaddress == NULL)
 		return false;
 	if (is_valid_ipv4(ipaddress) || is_valid_ipv6(ipaddress)) {
-		stat->ipaddress = realloc(stat->ipaddress, strlen(ipaddress) + 1);
-		if (stat->ipaddress == NULL)
+		if (safe_realloc(&stat->ipaddress, 1, strlen(ipaddress) + 1) != 0)
 			return false;
 		(void)strcpy(stat->ipaddress, ipaddress);
 		return true;
@@ -34,8 +33,7 @@ set_sws_portnumber(struct swsstate *stat, char *portnumber)
 	if (portnumber == NULL)
 		return false;
 	if (is_valid_portnumber(portnumber)) {
-		stat->portnumber = realloc(stat->portnumber, strlen(portnumber) + 1);
-		if (stat->portnumber == NULL)
+		if (safe_realloc(&stat->portnumber, 1, strlen(portnumber) + 1) != 0)
 			return false;
 		(void)strcpy(stat->portnumber, portnumber);
 		return true;
@@ -74,9 +72,9 @@ process_sws(const struct swsstate *stat)
 	struct simpleserver server;
 	init_simpleserver(&server, ipaddress, portnumber, debugmode);
 	if (setup_server(&server) != 0) {
-		
+		return -1;
 	}
-	return -1;
+	return 0;
 }
 
 void 

@@ -1,7 +1,6 @@
 #ifndef _SIMPLE_SERVER_
 #define _SIMPLE_SERVER_
 
-#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <netdb.h>

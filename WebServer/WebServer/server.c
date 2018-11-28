@@ -8,8 +8,7 @@ set_server_ipaddress(struct simpleserver *server, char *ipaddress)
 	if (ipaddress == NULL)
 		return;
 	if (is_valid_ipv4(ipaddress) || is_valid_ipv6(ipaddress)) {
-		server->ipaddress = realloc(server->ipaddress, strlen(ipaddress) + 1);
-		if (server->ipaddress == NULL)
+		if (safe_realloc(&server->ipaddress, 1, strlen(ipaddress) + 1) != 0)
 			return;
 		(void)strcpy(server->ipaddress, ipaddress);
 	}
@@ -23,8 +22,7 @@ set_server_portnumber(struct simpleserver *server, char *portnumber)
 	if (portnumber == NULL)
 		return;
 	if (is_valid_portnumber(portnumber)) {
-		server->portnumber = realloc(server->portnumber, strlen(portnumber) + 1);
-		if (server->portnumber == NULL)
+		if (safe_realloc(&server->portnumber, 1, strlen(portnumber) + 1) != 0)
 			return;
 		(void)strcpy(server->portnumber, portnumber);
 	}
@@ -95,14 +93,10 @@ init_simpleserver(struct simpleserver * server, char *ipaddress, char *portnumbe
 	uintmax_t maxsocketnum;
 	if (!get_max_socketnumber(&maxsocketnum))
 		return;
-	assert(maxsocketnum * sizeof(int) <= INT_MAX);
-	server->ltable = (int *)malloc(maxsocketnum * sizeof(int));
-	if (server->ltable == NULL)
+	if (safe_realloc(&server->ltable, maxsocketnum, sizeof(int)) != 0)
 		return;
 	(void)memset(server->ltable, 0, maxsocketnum * sizeof(int));
-	assert(maxsocketnum * sizeof(struct httpconnection) <= INT_MAX);
-	server->ctable = (struct httpconnection *)malloc(maxsocketnum * sizeof(struct httpconnection));
-	if (server->ctable == NULL)
+	if (safe_realloc(&server->ctable, maxsocketnum, sizeof(struct httpconnection)) != 0)
 		return;
 	(void)memset(server->ctable, 0, maxsocketnum * sizeof(struct httpconnection));
 }

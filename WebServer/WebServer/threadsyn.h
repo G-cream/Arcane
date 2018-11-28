@@ -1,5 +1,5 @@
 /*
- *This part mainly references following books:
+ *This part mainly refers following books:
  *1.Linux High-performance Server Programming
  *2.UNIX Network Programming
  *3.TCP/IP Illustrated

@@ -109,6 +109,12 @@ modfd(int kqueuefd, int fd, int ev)
 	epoll_ctl(kqueuefd, EPOLL_CTL_MOD, fd, &event);
 }
 
+int
+safe_realloc(void *ptr, size_t number, size_t size)
+{
+	return reallocarr(ptr, number, size);
+}
+
 #else
 
 void 
@@ -144,6 +150,40 @@ mod_fd(int epollfd, int fd, int ev)
 	event.data.fd = fd;
 	event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
 	epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+}
+
+/*
+ *NetBSD: reallocarr.c
+ */
+int
+safe_realloc(void *ptr, size_t number, size_t size)
+{
+	int saved_errno, result;
+	void *optr;
+	void *nptr;
+	saved_errno = errno;
+	memcpy(&optr, ptr, sizeof(ptr));
+	if (number == 0 || size == 0) {
+		free(optr);
+		nptr = NULL;
+		memcpy(ptr, &nptr, sizeof(ptr));
+		errno = saved_errno;
+		return 0;
+	}
+	if (number > SIZE_MAX / size)) {
+		errno = saved_errno;
+		return EOVERFLOW;
+	}
+	nptr = realloc(optr, number * size);
+	if (nptr == NULL) {
+		result = errno;
+	}
+	else {
+		result = 0;
+		memcpy(ptr, &nptr, sizeof(ptr));
+	}
+	errno = saved_errno;
+	return result;
 }
 
 #endif // _BSD_

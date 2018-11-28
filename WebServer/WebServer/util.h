@@ -2,17 +2,21 @@
 #define _UTIL_
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/cdefs.h>
 #include <sys/resource.h>
 #ifdef _BSD_
 #include <sys/event.h>
 #include <sys/types.h>
 #else
+#include <stdlib.h>
 #include <sys/epoll.h>
 #endif
 
@@ -28,6 +32,7 @@ bool contain_fd(int, int *, int);
 void add_fd(int, int , bool);
 void remove_fd(int, int);
 void mod_fd(int, int, int);
+int safe_realloc(void *, size_t, size_t);
 //void log(int fd, );
 #endif // !_UTIL_
 
