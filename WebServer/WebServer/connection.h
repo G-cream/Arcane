@@ -33,7 +33,7 @@ struct httpconnection {
 	int ivcount;
 };
 
-void init_httpconnection(struct httpconnection *, int, struct sockaddr *);
+bool init_httpconnection(struct httpconnection *, int, struct sockaddr *);
 bool read_httpconnection(struct httpconnection *);
 bool write_httpconnection(struct httpconnection *);
 void close_httpconnection(struct httpconnection *);

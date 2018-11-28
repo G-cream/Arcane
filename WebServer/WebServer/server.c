@@ -68,7 +68,8 @@ insert_server_connectiontable(struct simpleserver *server, int connfd, struct so
 	assert(connfd <= maxsocketnum);
 	if (server->ccount < maxsocketnum) {
 		++server->ccount;
-		init_httpconnection(&server->ctable[connfd], connfd, address);
+		if (!init_httpconnection(&server->ctable[connfd], connfd, address))
+			return false;
 	}
 	return true;
 }
@@ -83,26 +84,27 @@ remove_server_connectiontable(struct simpleserver *server, int connfd)
 	return true;
 }
 
-void
+bool
 init_simpleserver(struct simpleserver * server, char *ipaddress, char *portnumber, bool debugmode)
 {
 	if (server == NULL)
-		return;	
+		return false;	
 	(void)memset(server, 0, sizeof(struct simpleserver));
 	if (!set_server_ipaddress(server, ipaddress))
-		return;
+		return false;
 	if (!set_server_portnumber(server, portnumber))
-		return;	
+		return false;	
 	uintmax_t maxsocketnum;
 	if (!get_max_socketnumber(&maxsocketnum))
-		return;
+		return false;
 	if (safe_realloc(&server->ltable, maxsocketnum, sizeof(int)) != 0)
-		return;
+		return false;
 	(void)memset(server->ltable, 0, maxsocketnum * sizeof(int));
 	if (safe_realloc(&server->ctable, maxsocketnum, sizeof(struct httpconnection)) != 0)
-		return;
+		return false;
 	(void)memset(server->ctable, 0, maxsocketnum * sizeof(struct httpconnection));
 	server->debugmode = debugmode;
+	return true;
 }
 
 int

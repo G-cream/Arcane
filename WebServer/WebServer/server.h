@@ -38,7 +38,7 @@ bool insert_server_listentable(struct simpleserver *, int);
 bool remove_server_listentable(struct simpleserver *, int);
 bool insert_server_connectiontable(struct simpleserver *, int, struct sockaddr *);
 bool remove_server_connectiontable(struct simpleserver *, int);
-void init_simpleserver(struct simpleserver *, char *, char *, bool);
+bool init_simpleserver(struct simpleserver *, char *, char *, bool);
 int get_tcpaddrs(struct simpleserver *, struct addrinfo **);
 int listen_connections(struct simpleserver *, struct addrinfo *);
 int accept_connections(struct simpleserver *);

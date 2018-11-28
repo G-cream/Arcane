@@ -7,7 +7,7 @@ main(int argc, char **argv)
 	struct swsstate sws;	
 	int opt;
 
-	init_sws(&sws);
+	(void)init_sws(&sws);
 	while ((opt = getopt(argc, argv, "c:dhi:l:p:")) != -1) {
 		switch (opt) {
 		case 'c':

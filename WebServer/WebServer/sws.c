@@ -1,11 +1,12 @@
 #include "sws.h"
 
-void
+bool
 init_sws(struct swsstate *stat)
 {
 	if (stat == NULL)
-		return;
+		return false;
 	(void)memset(stat, 0, sizeof(struct swsstate));
+	return true;
 }
 
 bool
@@ -48,32 +49,26 @@ process_sws(const struct swsstate *stat)
 	 *to be re-evaluated.
 	 */
 	if (stat == NULL)
-		return -1;
-	
+		return -1;	
 	bool debugmode;
 	char *ipaddress, *portnumber;	
 	ipaddress = NULL;
-	portnumber = DEFAULT_PORT;
-	
-	if (stat->debuggingflag) {
+	portnumber = DEFAULT_PORT;	
+	if (stat->debuggingflag)
 		debugmode = stat->debuggingflag;
-	}
-	if (stat->ipflag) {
+	if (stat->ipflag)
 		ipaddress = stat->ipaddress;
-	}
-	if (stat->portflag) {
+	if (stat->portflag)
 		portnumber = stat->portnumber;
-	}
 	if (stat->usageflag) {
 		usage(STDOUT_FILENO);
 		return 0;
-	}
-	
+	}	
 	struct simpleserver server;
-	init_simpleserver(&server, ipaddress, portnumber, debugmode);
-	if (setup_server(&server) != 0) {
+	if (!init_simpleserver(&server, ipaddress, portnumber, debugmode))
 		return -1;
-	}
+	if (setup_server(&server) != 0) 
+		return -1;
 	return 0;
 }
 

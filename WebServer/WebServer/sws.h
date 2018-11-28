@@ -28,7 +28,7 @@ struct swsstate {
 
 bool set_sws_ipaddress(struct swsstate *, char *);
 bool set_sws_portnumber(struct swsstate *, char *);
-void init_sws(struct swsstate *);
+bool init_sws(struct swsstate *);
 int process_sws(const struct swsstate *);
 void usage(int fd);
 

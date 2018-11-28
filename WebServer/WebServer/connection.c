@@ -1,10 +1,10 @@
 #include "connection.h"
 
-void 
+bool 
 init_httpconnection(struct httpconnection *connection, int connfd, struct sockaddr *address)
 {
 	if (connection == NULL)
-		return;
+		return false;
 	connection->socktfd = connfd;
 	switch (address->sa_family) {
 	case AF_INET:
@@ -17,7 +17,7 @@ init_httpconnection(struct httpconnection *connection, int connfd, struct sockad
 			sizeof(struct sockaddr_in6));
 	case AF_UNSPEC:
 	default:
-		return;
+		return false;
 	}
 }
 
