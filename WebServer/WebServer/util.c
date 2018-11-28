@@ -170,7 +170,7 @@ safe_realloc(void *ptr, size_t number, size_t size)
 		errno = saved_errno;
 		return 0;
 	}
-	if (number > SIZE_MAX / size)) {
+	if (number > SIZE_MAX / size) {
 		errno = saved_errno;
 		return EOVERFLOW;
 	}

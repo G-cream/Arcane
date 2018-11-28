@@ -36,6 +36,7 @@ struct httpconnection {
 bool init_httpconnection(struct httpconnection *, int, struct sockaddr *);
 bool read_httpconnection(struct httpconnection *);
 bool write_httpconnection(struct httpconnection *);
+bool process(struct httpconnection *);
 void close_httpconnection(struct httpconnection *);
 
 #endif // !_CONN_

@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include "connection.h"
+#include "threadpool.h"
 #include "util.h"
 #ifdef _BSD_
 #include <sys/event.h>
