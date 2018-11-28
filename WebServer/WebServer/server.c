@@ -90,7 +90,9 @@ bool
 init_simpleserver(struct simpleserver * server, char *ipaddress, char *portnumber, bool debugmode)
 {
 	if (server == NULL)
-		return false;	
+		return false;
+	//TODO: signal needs to be process
+	//addsig(SIGPIPE, SIG_IGN);
 	(void)memset(server, 0, sizeof(struct simpleserver));
 	if (!set_server_ipaddress(server, ipaddress))
 		return false;
@@ -171,6 +173,9 @@ accept_connections(struct simpleserver *server)
 	uintmax_t maxsocketnum;
 	if (!get_max_socketnumber(&maxsocketnum))
 		return -2;
+	struct threadpool pool;
+	if (!init_threadpool(&pool, DEFAULT_THREAD_NUM, DEFAULT_CONN_NUM))
+		return -3;
 #ifdef _BSD_
 	int kq = kqueue();
 #else
@@ -183,7 +188,7 @@ accept_connections(struct simpleserver *server)
 		if ((number < 0) && (errno != EINTR))
 			//TODO: the errno should be logged
 			break;
-		for (int n = 0; n != number; ++n) {
+		for (int n = 0; n < number; ++n) {
 			int sockfd = events[n].data.fd;
 			if (contain_fd(sockfd, server->ltable, server->lcount)) {
 				struct sockaddr_storage client_address;
@@ -201,9 +206,10 @@ accept_connections(struct simpleserver *server)
 				remove_fd(epollfd, sockfd);
 			}
 			else if (events[n].events & EPOLLIN) {
-				if (read_httpconnection(&server->ctable[sockfd]))
-					//					pool->append(users + sockfd);
-										continue;
+				if (read_httpconnection(&server->ctable[sockfd])) {
+					append_threadpool(&pool, &server->ctable[sockfd]);
+					continue;
+				}
 				else {
 					remove_server_connectiontable(server, sockfd);
 					remove_fd(epollfd, sockfd);
@@ -228,18 +234,17 @@ int
 setup_server(struct simpleserver *server) {
 	if (server == NULL)
 		return -1;
-		
 	struct addrinfo *reslist;
-	if (get_tcpaddrs(server, &reslist) != 0) 
-		return -2;
-	if (listen_connections(server, reslist) != 0) 
-		return -3;
-	if (accept_connections(server) != 0) 
-		return -4;	
 	if (!server->debugmode) {
 		if (daemon(1, 1) == -1)
-			return -5;
-	}
+			return -2;
+	}	
+	if (get_tcpaddrs(server, &reslist) != 0) 
+		return -3;
+	if (listen_connections(server, reslist) != 0) 
+		return -4;
+	if (accept_connections(server) != 0) 
+		return -5;
 	freeaddrinfo(reslist);
 	return 0;
 }

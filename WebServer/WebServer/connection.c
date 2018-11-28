@@ -5,20 +5,24 @@ init_httpconnection(struct httpconnection *connection, int connfd, struct sockad
 {
 	if (connection == NULL)
 		return false;
+	(void)memset(connection, 0, sizeof(struct httpconnection));
 	connection->socktfd = connfd;
 	switch (address->sa_family) {
 	case AF_INET:
 		memcpy(&connection->address,
 			(struct sockaddr_in *)address,
 			sizeof(struct sockaddr_in));
+		break;
 	case AF_INET6:
 		memcpy(&connection->address,
 			(struct sockaddr_in6 *)address,
 			sizeof(struct sockaddr_in6));
+		break;
 	case AF_UNSPEC:
 	default:
 		return false;
 	}
+	return true;
 }
 
 bool 
@@ -29,7 +33,6 @@ read_httpconnection(struct httpconnection *connection)
 	if (index >= READ_BUFFER_SIZE)
 		return false;
 	int bytesreceived;
-	bytesreceived = 0;
 	for (;;)
 	{
 		bytesreceived = recv(connection->socktfd, &buffer[index], READ_BUFFER_SIZE - index, 0);
@@ -42,6 +45,10 @@ read_httpconnection(struct httpconnection *connection)
 			return false;
 		connection->readindex += bytesreceived;
 	}
+#ifdef DEBUG
+	printf("receive: %s", buffer);
+#endif // DEBUG
+
 	return true;
 }
 
@@ -95,6 +102,14 @@ write_httpconnection(struct httpconnection *connection)
 			} 
 		}
 	}
+}
+
+bool process(struct httpconnection *connection)
+{
+	sprintf(connection->writebuffer, "%s\n", "received!");
+	connection->writeindex = 11;
+	write_httpconnection(connection);
+	return true;
 }
 
 void
