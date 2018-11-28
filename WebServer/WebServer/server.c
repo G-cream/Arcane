@@ -1,31 +1,33 @@
 #include "server.h"
 
-void
+bool
 set_server_ipaddress(struct simpleserver *server, char *ipaddress)
 {
 	if (server == NULL)
-		return;
+		return false;
 	if (ipaddress == NULL)
-		return;
+		return false;
 	if (is_valid_ipv4(ipaddress) || is_valid_ipv6(ipaddress)) {
 		if (safe_realloc(&server->ipaddress, 1, strlen(ipaddress) + 1) != 0)
-			return;
+			return false;
 		(void)strcpy(server->ipaddress, ipaddress);
 	}
+	return true;
 }
 
-void
+bool
 set_server_portnumber(struct simpleserver *server, char *portnumber)
 {
 	if (server == NULL)
-		return;
+		return false;
 	if (portnumber == NULL)
-		return;
+		return false;
 	if (is_valid_portnumber(portnumber)) {
 		if (safe_realloc(&server->portnumber, 1, strlen(portnumber) + 1) != 0)
-			return;
+			return false;
 		(void)strcpy(server->portnumber, portnumber);
 	}
+	return true;
 }
 
 bool
@@ -87,9 +89,10 @@ init_simpleserver(struct simpleserver * server, char *ipaddress, char *portnumbe
 	if (server == NULL)
 		return;	
 	(void)memset(server, 0, sizeof(struct simpleserver));
-	set_server_ipaddress(server, ipaddress);
-	set_server_portnumber(server, portnumber);
-	server->debugmode = debugmode;
+	if (!set_server_ipaddress(server, ipaddress))
+		return;
+	if (!set_server_portnumber(server, portnumber))
+		return;	
 	uintmax_t maxsocketnum;
 	if (!get_max_socketnumber(&maxsocketnum))
 		return;
@@ -99,6 +102,7 @@ init_simpleserver(struct simpleserver * server, char *ipaddress, char *portnumbe
 	if (safe_realloc(&server->ctable, maxsocketnum, sizeof(struct httpconnection)) != 0)
 		return;
 	(void)memset(server->ctable, 0, maxsocketnum * sizeof(struct httpconnection));
+	server->debugmode = debugmode;
 }
 
 int

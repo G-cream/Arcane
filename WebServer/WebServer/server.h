@@ -1,6 +1,7 @@
 #ifndef _SIMPLE_SERVER_
 #define _SIMPLE_SERVER_
 
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <netdb.h>
@@ -31,8 +32,8 @@ struct simpleserver {
 	int ccount;
 };
 
-void set_server_ipaddress(struct simpleserver *, char *);
-void set_server_portnumber(struct simpleserver *, char *);
+bool set_server_ipaddress(struct simpleserver *, char *);
+bool set_server_portnumber(struct simpleserver *, char *);
 bool insert_server_listentable(struct simpleserver *, int);
 bool remove_server_listentable(struct simpleserver *, int);
 bool insert_server_connectiontable(struct simpleserver *, int, struct sockaddr *);
