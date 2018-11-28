@@ -68,8 +68,10 @@ insert_server_connectiontable(struct simpleserver *server, int connfd, struct so
 	assert(connfd <= maxsocketnum);
 	if (server->ccount < maxsocketnum) {
 		++server->ccount;
-		if (!init_httpconnection(&server->ctable[connfd], connfd, address))
+		if (!init_httpconnection(&server->ctable[connfd], connfd, address)) {
+			close_httpconnection(&server->ctable[connfd]);
 			return false;
+		}
 	}
 	return true;
 }
@@ -253,10 +255,11 @@ processrequest(struct simpleserver *server, int fd)
 	return 0;
 }
 
-int
+void
 close_server(struct simpleserver *server)
 {
+	free(server->ipaddress);
+	free(server->portnumber);
 	free(server->ltable);
 	free(server->ctable);
-	return 0;
 }

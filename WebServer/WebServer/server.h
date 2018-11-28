@@ -44,7 +44,7 @@ int listen_connections(struct simpleserver *, struct addrinfo *);
 int accept_connections(struct simpleserver *);
 int setup_server(struct simpleserver *);
 int processrequest(struct simpleserver *, int);
-int close_server(struct simpleserver *);
+void close_server(struct simpleserver *);
 
 
 #endif // !_SIMPLE_SERVER_

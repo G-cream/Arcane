@@ -65,10 +65,14 @@ process_sws(const struct swsstate *stat)
 		return 0;
 	}	
 	struct simpleserver server;
-	if (!init_simpleserver(&server, ipaddress, portnumber, debugmode))
+	if (!init_simpleserver(&server, ipaddress, portnumber, debugmode)) {
+		close_server(&server);
 		return -1;
-	if (setup_server(&server) != 0) 
+	}
+	if (setup_server(&server) != 0) {
+		close_server(&server);
 		return -1;
+	}
 	return 0;
 }
 
