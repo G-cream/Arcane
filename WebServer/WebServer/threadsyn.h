@@ -16,7 +16,7 @@ struct sem {
 	sem_t threadsem;
 };
 
-void init_sem(struct sem *);
+bool init_sem(struct sem *);
 bool wait_sem(struct sem *);
 bool post_sem(struct sem *);
 void destroy_sem(struct sem *);
@@ -25,7 +25,7 @@ struct locker {
 	pthread_mutex_t threadmutex;
 };
 
-void init_locker(struct locker *);
+bool init_locker(struct locker *);
 bool lock(struct locker *);
 bool unlock(struct locker *);
 void destroy_locker(struct locker *);
@@ -35,7 +35,7 @@ struct cond {
 	pthread_cond_t threadcond;
 };
 
-void init_cond(struct cond *);
+bool init_cond(struct cond *);
 bool signal_cond(struct cond *);
 bool wait_cond(struct cond *);
 void destroy_cond(struct cond *);
