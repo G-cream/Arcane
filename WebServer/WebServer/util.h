@@ -20,16 +20,6 @@
 #include <sys/epoll.h>
 #endif
 
-typedef enum trimstate
-{
-	OSTATE   = 0,
-	SPSTATE,
-	HTSTATE,
-	RSTATE,
-	NSTATE,
-	LWSSTATE
-}trimstate;
-
 bool is_valid_ipv4(const char *);
 bool is_valid_ipv6(const char *);
 bool is_valid_portnumber(const char *);
