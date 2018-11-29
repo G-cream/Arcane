@@ -20,6 +20,16 @@
 #include <sys/epoll.h>
 #endif
 
+typedef enum trimstate
+{
+	OSTATE   = 0,
+	SPSTATE,
+	HTSTATE,
+	RSTATE,
+	NSTATE,
+	LWSSTATE
+}trimstate;
+
 bool is_valid_ipv4(const char *);
 bool is_valid_ipv6(const char *);
 bool is_valid_portnumber(const char *);
@@ -28,6 +38,7 @@ bool is_valid_portnumber(const char *);
  */
 bool get_max_socketnumber(uintmax_t *);
 int set_nonblocking(int);
+int trim_request(char *, int, char *, int);
 bool contain_fd(int, int *, int);
 void add_fd(int, int , bool);
 void remove_fd(int, int);
