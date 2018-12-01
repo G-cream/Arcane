@@ -47,5 +47,4 @@ int setup_server(struct simpleserver *);
 int processrequest(struct simpleserver *, int);
 void close_server(struct simpleserver *);
 
-
 #endif // !_SIMPLE_SERVER_
