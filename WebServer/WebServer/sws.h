@@ -23,11 +23,13 @@ struct swsstate {
 	char *ipaddress;
 	char *logdir;
 	char *portnumber;
-	char *docroot;
+	char *rootdir;
 };
 
 bool set_sws_ipaddress(struct swsstate *, char *);
 bool set_sws_portnumber(struct swsstate *, char *);
+bool set_sws_cgidir(struct swsstate *, char *);
+bool set_sws_rootdir(struct swsstate *, char *);
 bool init_sws(struct swsstate *);
 int process_sws(const struct swsstate *);
 void usage(int fd);

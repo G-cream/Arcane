@@ -42,6 +42,48 @@ set_sws_portnumber(struct swsstate *stat, char *portnumber)
 	return false;
 }
 
+bool
+set_sws_cgidir(struct swsstate *stat, char *dir)
+{
+	if (stat == NULL)
+		return false;
+	if (dir == NULL)
+		return false;
+	long maxpath;
+	maxpath = get_max_path();
+	char resolvedpath[maxpath];
+	if (realpath(dir, resolvedpath) == NULL)
+		return false;
+	if (is_valid_dir(resolvedpath)) {
+		if (safe_realloc(&stat->cgidir, 1, strlen(resolvedpath) + 1) != 0)
+			return false;
+		(void)strcpy(stat->cgidir, resolvedpath);
+		return true;
+	}
+	return false;
+}
+
+bool
+set_sws_rootdir(struct swsstate *stat, char *dir)
+{
+	if (stat == NULL)
+		return false;
+	if (dir == NULL)
+		return false;
+	long maxpath;
+	maxpath = get_max_path();
+	char resolvedpath[maxpath];
+	if (realpath(dir, resolvedpath) == NULL)
+		return false;
+	if (is_valid_dir(resolvedpath)) {
+		if (safe_realloc(&stat->rootdir, 1, strlen(resolvedpath) + 1) != 0)
+			return false;
+		(void)strcpy(stat->rootdir, resolvedpath);
+		return true;
+	}
+	return false;
+}
+
 int
 process_sws(const struct swsstate *stat)
 {

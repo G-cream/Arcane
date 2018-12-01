@@ -11,6 +11,8 @@ main(int argc, char **argv)
 	while ((opt = getopt(argc, argv, "c:dhi:l:p:")) != -1) {
 		switch (opt) {
 		case 'c':
+			if (!set_sws_cgidir(&sws, optarg))
+				errx(EXIT_FAILURE, "CGI dir is invalid!\n");
 			sws.cgiflag = true;
 			break;
 		case 'd':
@@ -44,9 +46,8 @@ main(int argc, char **argv)
 	
 	if (argc == 0)
 		errx(EXIT_FAILURE, "Dir is missing!\n");
-	
-	/*Here must have somthing wrong what if I type in two dirs.*/
-	//realpath(argv[0], sws.docroot);
+	if (argc != 1 || !set_sws_rootdir(&sws, argv[0]))
+		errx(EXIT_FAILURE, "Root dir is invalid!\n");
 	int result = process_sws(&sws);
 	switch (result) {
 	case -1:
