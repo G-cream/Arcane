@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include "request.h"
 #include "util.h"
 #ifdef _BSD_
 #include <sys/event.h>
@@ -28,7 +29,6 @@ struct httpconnection {
 	int readindex;
 	char writebuffer[WRITE_BUFFER_SIZE];
 	int writeindex;
-	bool linger;
 	struct iovec iv[2];
 	int ivcount;
 };

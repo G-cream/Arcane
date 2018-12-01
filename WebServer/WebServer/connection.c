@@ -69,7 +69,7 @@ write_httpconnection(struct httpconnection *connection)
 	int reservedbytes = connection->writeindex;
 	int socktfd = connection->socktfd;
 	int pollfd = connection->pollfd;
-	bool linger = connection->linger;
+	//bool linger = connection->linger;
 	struct iovec *iv = connection->iv;
 	int ivcount = connection->ivcount;
 	if (reservedbytes == 0) {
@@ -91,21 +91,28 @@ write_httpconnection(struct httpconnection *connection)
 		sendedbytes += number;
 		if (reservedbytes <= sendedbytes) {
 //			unmap();
-			if (linger) {
-//				init();
-				mod_fd(pollfd, socktfd, EPOLLIN);
-				return true;
-			}
-			else {
+//			if (linger) {
+////				init();
+//				mod_fd(pollfd, socktfd, EPOLLIN);
+//				return true;
+//			}
+//			else {
 				mod_fd(pollfd, socktfd, EPOLLIN);
 				return false;
-			} 
+//			} 
 		}
 	}
 }
 
 bool process(struct httpconnection *connection)
 {
+	struct httprequest request;
+	if (!init_httprequest(&request))
+		//TODO: should write back something instead of return.
+		return false;
+	process_request(&request, connection->readbuffer, connection->readindex);
+	
+	
 	sprintf(connection->writebuffer, "%s\n", "received!");
 	connection->writeindex = 11;
 	write_httpconnection(connection);
