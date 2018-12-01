@@ -24,7 +24,7 @@ bool grow_connqueue(struct connqueue *);
 bool init_connqueue(struct connqueue *);
 bool push_back(struct connqueue *, struct httpconnection *);
 bool pop_front(struct connqueue *);
-struct httpconnection * get_front(struct connqueue *);
+struct httpconnection *get_front(struct connqueue *);
 void destroy_connqueue(struct connqueue *);
 
 struct threadpool {
@@ -39,7 +39,7 @@ struct threadpool {
 
 bool init_threadpool(struct threadpool *, int, int);
 bool append_threadpool(struct threadpool *, struct httpconnection *);
-void * worker(void *);
+void *worker(void *);
 void destroy_threadpool(struct threadpool *);
 
 #endif // !_POOL_

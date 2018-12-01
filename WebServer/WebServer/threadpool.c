@@ -134,8 +134,7 @@ void *
 worker(void *arg)
 {
 	struct threadpool* pool = (struct threadpool *)arg;
-	while (!pool->stop)
-	{
+	while (!pool->stop)	{
 		struct httpconnection *conn;
 		(void)wait_sem(&pool->queuestat);
 		(void)lock(&pool->queuelocker);
@@ -149,8 +148,7 @@ worker(void *arg)
 			continue;
 		}
 		(void)unlock(&pool->queuelocker);
-		if (conn != NULL)
-		{
+		if (conn != NULL) {
 			//TODO: Check the return value
 			process(conn); 
 		}		
