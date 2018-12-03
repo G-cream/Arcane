@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{e5b44f62-7528-4b43-a03a-a7fb9cb9d071}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{b842297c-a54b-496d-9faf-1abc994ace16}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{19d9d614-a4f8-45b3-b3a9-3d36902c47ef}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="VisualGDB settings">
+      <UniqueIdentifier>{0a02ec0d-beb8-4248-b1a8-6ce826e967fb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="WebServer-Debug.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="WebServer-Release.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <ClCompile Include="sws.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="server.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="sws.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="connection.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="threadsyn.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="threadpool.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="request.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="response.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="server.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="util.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="connection.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="threadsyn.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="threadpool.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="request.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="config.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="response.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

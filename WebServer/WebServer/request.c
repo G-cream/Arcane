@@ -181,7 +181,6 @@ readline(struct httprequest *req, char *linebuffer, int length)
 		return LINE_OPEN;
 	
 	int linebufferindex;
-	char appendedchar;
 	bool findflag;
 	linebufferindex = 0;
 	findflag = false;
