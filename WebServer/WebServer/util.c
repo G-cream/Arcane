@@ -67,19 +67,18 @@ is_file_accessible(const char *path)
 char*
 get_mime(const char* buffer)
 {
-	//	const char *mime;
-	//	char *mime_ret;
-	//	magic_t magic;
-	//
-	//	magic = magic_open(MAGIC_MIME_TYPE);
-	//	magic_load(magic, NULL);
-	//	magic_compile(magic, NULL);
-	//	mime = magic_file(magic, path);
-	//	mime_ret = generate_str(mime);
-	//	magic_close(magic);
-	//
-	//	return mime_ret;
-		return "TEST TYPE";
+		const char *mime;
+		char *mime_ret;
+		magic_t magic;
+	
+		magic = magic_open(MAGIC_MIME_TYPE);
+		magic_load(magic, NULL);
+		magic_compile(magic, NULL);
+		mime = magic_file(magic, path);
+		mime_ret = generate_str(mime);
+		magic_close(magic);
+	
+		return mime_ret;
 }
 
 int
