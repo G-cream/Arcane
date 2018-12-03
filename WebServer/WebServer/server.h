@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include "connection.h"
+#include "config.h"
 #include "threadpool.h"
 #include "util.h"
 #ifdef _BSD_
@@ -21,30 +22,27 @@
 #include <sys/epoll.h>
 #endif
 
-#define MAX_LISTEN 5
-
 struct simpleserver {
-	bool debugmode;
-	char *ipaddress;
-	char *portnumber;
 	int *ltable;
 	int lcount;
 	struct httpconnection *ctable;
 	int ccount;
 };
 
-bool set_server_ipaddress(struct simpleserver *, char *);
-bool set_server_portnumber(struct simpleserver *, char *);
+bool set_config_ipaddress(char *);
+bool set_config_portnumber(char *);
+bool set_config_cgidir(char *);
+bool set_config_rootdir(char *);
+bool set_config_logdir(char *);
 bool insert_server_listentable(struct simpleserver *, int);
 bool remove_server_listentable(struct simpleserver *, int);
-bool insert_server_connectiontable(struct simpleserver *, int, struct sockaddr *);
+bool insert_server_connectiontable(struct simpleserver *, int, int, struct sockaddr *);
 bool remove_server_connectiontable(struct simpleserver *, int);
-bool init_simpleserver(struct simpleserver *, char *, char *, bool);
+bool init_simpleserver(struct simpleserver *, char *, char *, bool, bool, char *, char *, char *);
 int get_tcpaddrs(struct simpleserver *, struct addrinfo **);
 int listen_connections(struct simpleserver *, struct addrinfo *);
 int accept_connections(struct simpleserver *);
 int setup_server(struct simpleserver *);
-int processrequest(struct simpleserver *, int);
 void close_server(struct simpleserver *);
 
 #endif // !_SIMPLE_SERVER_

@@ -9,10 +9,8 @@
 
 #include <limits.h>
 #include "connection.h"
+#include "config.h"
 #include "threadsyn.h"
-
-#define DEFAULT_THREAD_NUM 5
-#define DEFAULT_CONN_NUM 100
 
 struct connqueue {
 	struct httpconnection **list;

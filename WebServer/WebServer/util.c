@@ -1,5 +1,5 @@
 #include "util.h"
-//#define _BSD_
+
 bool 
 is_valid_ipv4(const char *ipv4)
 {
@@ -26,14 +26,116 @@ bool
 is_valid_portnumber(const char *portnumber)
 {	
 	if (portnumber == NULL)
-		return false;
-	
+		return false;	
 	if (strspn(portnumber, "0123456789") != strlen(portnumber))
 		return false;
-//	int port = atoi(portnumber);
-//	if (port <= 1024)
-//		return false;
+	int port = atoi(portnumber);
+	if (port > 65535)
+		return false;
 	return true;
+}
+
+bool
+is_valid_dir(const char *path)
+{	
+	if (path == NULL)
+		return false;
+	char resolvedpath[MAX_PATH_SIZE];
+	if (realpath(path, resolvedpath) == NULL)
+		return false;
+	struct stat st;
+	return stat(resolvedpath, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+bool
+is_file_accessible(const char *path)
+{
+	if (path == NULL)
+		return false;
+	char resolvedpath[MAX_PATH_SIZE];
+	if (realpath(path, resolvedpath) == NULL)
+		return false;
+	struct stat st;
+	if (stat(resolvedpath, &st) < 0)
+		return false;
+	if (st.st_mode & S_IROTH && 
+		access(resolvedpath, R_OK) == 0)
+		return true;
+	return false;
+}
+
+char*
+get_mime(const char* buffer)
+{
+	//	const char *mime;
+	//	char *mime_ret;
+	//	magic_t magic;
+	//
+	//	magic = magic_open(MAGIC_MIME_TYPE);
+	//	magic_load(magic, NULL);
+	//	magic_compile(magic, NULL);
+	//	mime = magic_file(magic, path);
+	//	mime_ret = generate_str(mime);
+	//	magic_close(magic);
+	//
+	//	return mime_ret;
+		return "TEST TYPE";
+}
+
+int
+get_file_stat(const char *path)
+{
+	if (path == NULL)
+		return -1;
+	char resolvedpath[MAX_PATH_SIZE];
+	if (realpath(path, resolvedpath) == NULL)
+		return false;
+	struct stat st;
+	if (stat(resolvedpath, &st) < 0)
+		return 0;	
+	if (S_ISDIR(st.st_mode))
+		return 1;
+	if (S_ISREG(st.st_mode))
+		return 2;
+	return -1;
+}
+
+bool 
+get_date_rfc822(char *date, const struct tm *time)
+{
+	if (date == NULL || time == NULL)
+		return false;
+	if (strftime(date, MAX_DATE_SIZE, "%a, %d %b %Y %T GMT", time) == 0)
+		return false;
+	return true;
+}
+	
+bool 
+get_date_rfc850(char *date, const struct tm *time)
+{
+	if (date == NULL || time == NULL)
+		return false;
+	if (strftime(date, MAX_DATE_SIZE, "%A, %d-%b-%y %T GMT", time) == 0)
+		return false;
+	return true;
+}
+
+bool 
+get_date_asctime(char *date, const struct tm *time)
+{
+	if (date == NULL || time == NULL)
+		return false;
+	if (strftime(date, MAX_DATE_SIZE, "%c", time) == 0)
+		return false;
+	return true;	
+}
+
+void 
+get_server_date(char *date)
+{
+	time_t timep;
+	(void)time(&timep);
+	(void)get_date_rfc822(date, gmtime(&timep));
 }
 
 /*TODO:Everytime, read a new maxsock,
@@ -44,8 +146,7 @@ bool
 get_max_socketnumber(uintmax_t *maxsocketnumber)
 {
 	if (maxsocketnumber == NULL)
-		return false;
-	
+		return false;	
 	struct rlimit limit;
 	if (getrlimit(RLIMIT_NOFILE, &limit) != 0)
 		return false;
@@ -64,7 +165,8 @@ set_nonblocking(int fd)
 	return old_option;
 }
 
-bool contain_fd(int fd, int *fdlist, int length)
+bool 
+contain_fd(int fd, const int *fdlist, int length)
 {
 	if (fd == -1)
 		return false;
@@ -77,38 +179,139 @@ bool contain_fd(int fd, int *fdlist, int length)
 	return false;
 }
 
+bool
+generate_dirhtml(const char *path, char *dirhtml)
+{ 
+	if (path == NULL || !is_valid_dir(path))
+		return false;
+	int dircount;
+	char lmdate[MAX_DATE_SIZE], resolvedpath[MAX_PATH_SIZE];
+	struct dirent **dirlist;
+	struct stat st;	
+	if (realpath(path, resolvedpath) == NULL)
+		return false;
+	dircount = scandir(resolvedpath, &dirlist, 0, alphasort);
+	BEGIN_DIRHTML
+		printf("%s", "xxx");
+		for(int n = 0 ; n != dircount ; ++n) {
+		if (dirlist[n]->d_name[0] != '.') {
+			(void)lstat(resolvedpath, &st);
+			(void)strftime(lmdate, MAX_DATE_SIZE, "%F", localtime(&st.st_mtime));
+			INSERT_LINE(dirlist[n]->d_name, lmdate);
+		}
+	}
+	END_DIRHTML
+	strcpy(dirhtml, DIRHTML);
+	return true;
+}
 
+int
+map_file(char *abspath, void **mapaddr)
+{
+	if (abspath == NULL)
+		return -1;
+	struct stat st;
+	(void)stat(abspath, &st);
+	int fd = open(abspath, O_RDONLY);
+	*mapaddr = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	close(fd);
+	return st.st_size;
+}
+
+int 
+ishex(int x)
+{
+	return (x >= '0' && x <= '9')	||
+		(x >= 'a' && x <= 'f')	||
+		(x >= 'A' && x <= 'F');
+}
+ 
+//refers wiki rosettacode
+int 
+decode(const char *s, char *dec)
+{
+	char *o;
+	const char *end = s + strlen(s);
+	int c;
+ 
+	for (o = dec; s <= end; o++) {
+		c = *s++;
+		if (c == '+') 
+			c = ' ';
+		if (c == '?')
+			setenv("QUERY_STRING", s, 1);
+		else if (c == '%' && (!ishex(*s++)	||
+					!ishex(*s++)	||
+					!sscanf(s - 2, "%2x", &c)))
+			return -1;
+ 
+		if (dec) *o = c;
+	}
+ 
+	return o - dec;
+}
+
+void 
+logfile(const char* remoteip, const char* requesttime, 
+	const char *statusline, int statuscode, int contentlength)
+{
+	//sem_wait(&LOGLOCK);
+	if (CONFIG.debugmode) {
+		fprintf(stdout,
+			"%s %s %s %d %d\n", 
+			remoteip,
+			requesttime,
+			statusline,
+			statuscode,
+			contentlength);
+		fflush(stdout);
+	}
+	else {
+		FILE *f;
+		if ((f = fopen(CONFIG.logdir, "a+")) == NULL)
+			return;
+		fprintf(f,
+			"%s %s %s %d %d\n", 
+			remoteip,
+			requesttime,
+			statusline,
+			statuscode,
+			contentlength);
+		(void)fclose(f);
+	}
+	//sem_post(&LOGLOCK);
+}
 
 #ifdef _BSD_
 
 void 
-addfd(int kqueuefd, int fd, bool one_shot)
+addfd(int kqueuefd, int fd, bool oneshot)
 {
-	struct epoll_event event;
-	event.data.fd = fd;
-	event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-	if (one_shot)
-	{
-		event.events |= EPOLLONESHOT;
-	}
-	epoll_ctl(kqueuefd, EPOLL_CTL_ADD, fd, &event);
-	setnonblocking(fd);
+	struct kevent event;
+	int flag = EV_ADD | EV_CLEAR | EV_EOF;
+	if (oneshot)
+		flag |= EV_ONESHOT;
+	EV_SET(&event, fd, EVFILT_READ, flag, 0, 0, NULL);
+	kevent(kqueuefd, &event, 1, NULL, 0, NULL);
+	set_nonblocking(fd);
 }
 
 void 
 removefd(int kqueuefd, int fd)
 {
-	epoll_ctl(kqueuefd, EPOLL_CTL_DEL, fd, 0);
+	struct kevent event;
+	EV_SET(&event, fd, EV_DELETE, 0, 0, 0, NULL);
+	kevent(kqueuefd, &event, 1, NULL, 0, NULL);
 	close(fd);
 }
 
 void 
 modfd(int kqueuefd, int fd, int ev)
 {
-	struct epoll_event event;
-	event.data.fd = fd;
-	event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
-	epoll_ctl(kqueuefd, EPOLL_CTL_MOD, fd, &event);
+	struct kevent event;
+	int flag = EV_ADD | EV_CLEAR | EV_EOF;
+	EV_SET(&event, fd, ev, EV_CLEAR | EV_EOF | EV_ONESHOT, 0, 0, NULL);
+	kevent(kqueuefd, &event, 1, NULL, 0, NULL);
 }
 
 int
@@ -127,8 +330,7 @@ add_fd(int epollfd, int fd, bool one_shot)
 	struct epoll_event event;
 	event.data.fd = fd;
 	event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-	if (one_shot)
-	{
+	if (one_shot) {
 		event.events |= EPOLLONESHOT;
 	}
 	epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);

@@ -1,11 +1,12 @@
 #include "connection.h"
 
 bool 
-init_httpconnection(struct httpconnection *connection, int connfd, struct sockaddr *address)
+init_httpconnection(struct httpconnection *connection, int pollfd, int connfd, struct sockaddr *address)
 {
 	if (connection == NULL)
 		return false;
 	(void)memset(connection, 0, sizeof(struct httpconnection));
+	connection->pollfd = pollfd;
 	connection->socktfd = connfd;
 	switch (address->sa_family) {
 	case AF_INET:
@@ -30,12 +31,13 @@ read_httpconnection(struct httpconnection *connection)
 {
 	char *buffer = connection->readbuffer;
 	int index = connection->readindex;
-	if (index >= READ_BUFFER_SIZE)
+	if (index >= MAX_MESSAGE_SIZE)
 		return false;
 	int bytesreceived;
 	for (;;)
 	{
-		bytesreceived = recv(connection->socktfd, &buffer[index], READ_BUFFER_SIZE - index, 0);
+		bytesreceived = recv(connection->socktfd, &buffer[index], MAX_MESSAGE_SIZE - index, 0);
+		printf("%d, %d\n", bytesreceived, errno);
 		if (bytesreceived == -1) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
@@ -52,70 +54,95 @@ read_httpconnection(struct httpconnection *connection)
 	return true;
 }
 
-//void unmap()
-//{
-//	if (m_file_address)
-//	{
-//		munmap(m_file_address, m_file_stat.st_size);
-//		m_file_address = 0;
-//	}
-//}
+void 
+unmap(struct httpconnection *connection)
+{
+	if (connection->iv[1].iov_base == NULL)
+		return;
+	(void)munmap(connection->iv[1].iov_base, connection->iv[1].iov_len);
+	connection->iv[1].iov_base = NULL;
+	connection->iv[1].iov_len = 0;
+}
 
 bool 
 write_httpconnection(struct httpconnection *connection)
 {
-	int number = 0;
-	int sendedbytes = 0;
-	int reservedbytes = connection->writeindex;
-	int socktfd = connection->socktfd;
-	int pollfd = connection->pollfd;
-	//bool linger = connection->linger;
-	struct iovec *iv = connection->iv;
-	int ivcount = connection->ivcount;
-	if (reservedbytes == 0) {
-		mod_fd(pollfd, socktfd, EPOLLIN);
-//		init();
-		return true;
-	}
+	int byteswrited;
+	int bytesreserved;
+	bytesreserved = connection->iv[0].iov_len + connection->iv[1].iov_len;
 	for (;;) {
-		number = writev(socktfd, iv, ivcount);
-		if (number <= -1) {
+		byteswrited = writev(connection->socktfd, connection->iv, connection->ivcount);
+		if (byteswrited <= -1) {
 			if (errno == EAGAIN) {
-				mod_fd(pollfd, socktfd, EPOLLOUT);
+				mod_fd(connection->pollfd, connection->socktfd, EPOLLOUT);
 				return true;
 			}
-//			unmap();
 			return false;
 		}
-		reservedbytes -= number;
-		sendedbytes += number;
-		if (reservedbytes <= sendedbytes) {
-//			unmap();
-//			if (linger) {
-////				init();
-//				mod_fd(pollfd, socktfd, EPOLLIN);
-//				return true;
-//			}
-//			else {
-				mod_fd(pollfd, socktfd, EPOLLIN);
-				return false;
-//			} 
-		}
+		bytesreserved -= byteswrited;
+		if (bytesreserved == 0)
+			break;
 	}
+	return true;
 }
 
-bool process(struct httpconnection *connection)
+bool 
+process(struct httpconnection *connection)
 {
 	struct httprequest request;
 	if (!init_httprequest(&request))
-		//TODO: should write back something instead of return.
 		return false;
 	process_request(&request, connection->readbuffer, connection->readindex);
-	
-	
-	sprintf(connection->writebuffer, "%s\n", "received!");
-	connection->writeindex = 11;
-	write_httpconnection(connection);
+	//The request has the right format but not ends with a null line.
+	if (request.requeststate == NO_REQUEST) {
+		mod_fd(connection->pollfd, connection->socktfd, EPOLLIN);
+		return true;
+	}	
+	struct httpresponse response;
+	if (!init_httpresponse(&response))
+		return false;
+	process_response(&response, &request);
+	connection->iv[0].iov_base = response.responsebuffer;
+	connection->iv[0].iov_len = response.responselength;
+	connection->ivcount = 1;
+	if (request.method == GET) {
+		if (strlen(request.cgifilebuffer) != 0)
+			connection->iv[1].iov_base = request.cgifilebuffer;
+		else if (strlen(request.dirhtmlbuffer) != 0)
+			connection->iv[1].iov_base = request.cgifilebuffer;
+		else
+			connection->iv[1].iov_base = request.entitybody;
+		connection->iv[1].iov_len = request.entitybodylength;
+		++connection->ivcount;
+	}
+	mod_fd(connection->pollfd, connection->socktfd, EPOLLOUT);
+	char currentdate[MAX_DATE_SIZE];
+	get_server_date(currentdate);
+	char firstline[MAX_LINE_SIZE];
+	for (int n = 0; n != request.msgbufferlength; ++n) {
+		if (request.msgbuffer[n] == '\n' &&
+		request.msgbuffer[n - 1] == '\r') {
+			firstline[n - 1] = '\0';
+			break;
+		}
+		firstline[n] = request.msgbuffer[n];			
+	}
+	char ipaddress[MAX_URI_SIZE];
+	if (connection->address.ss_family == AF_INET) {
+		struct sockaddr_in *tempaddrv4;
+		tempaddrv4 = (struct sockaddr_in *)(&connection->address);
+		inet_ntop(tempaddrv4->sin_family, &tempaddrv4->sin_addr, ipaddress, MAX_URI_SIZE);
+	}
+	if (connection->address.ss_family == AF_INET6) {
+		struct sockaddr_in6 *tempaddrv6;
+		tempaddrv6 = (struct sockaddr_in6 *)(&connection->address);
+		inet_ntop(tempaddrv6->sin6_family, &tempaddrv6->sin6_addr, ipaddress, MAX_URI_SIZE);
+	}
+	logfile(ipaddress,
+		currentdate,
+		firstline,
+		response.statuscode,
+		request.entitybodylength);
 	return true;
 }
 

@@ -49,15 +49,10 @@ set_sws_cgidir(struct swsstate *stat, char *dir)
 		return false;
 	if (dir == NULL)
 		return false;
-	long maxpath;
-	maxpath = get_max_path();
-	char resolvedpath[maxpath];
-	if (realpath(dir, resolvedpath) == NULL)
-		return false;
-	if (is_valid_dir(resolvedpath)) {
-		if (safe_realloc(&stat->cgidir, 1, strlen(resolvedpath) + 1) != 0)
+	if (is_valid_dir(dir)) {
+		if (safe_realloc(&stat->cgidir, 1, strlen(dir) + 1) != 0)
 			return false;
-		(void)strcpy(stat->cgidir, resolvedpath);
+		(void)strcpy(stat->cgidir, dir);
 		return true;
 	}
 	return false;
@@ -70,15 +65,26 @@ set_sws_rootdir(struct swsstate *stat, char *dir)
 		return false;
 	if (dir == NULL)
 		return false;
-	long maxpath;
-	maxpath = get_max_path();
-	char resolvedpath[maxpath];
-	if (realpath(dir, resolvedpath) == NULL)
-		return false;
-	if (is_valid_dir(resolvedpath)) {
-		if (safe_realloc(&stat->rootdir, 1, strlen(resolvedpath) + 1) != 0)
+	if (is_valid_dir(dir)) {
+		if (safe_realloc(&stat->rootdir, 1, strlen(dir) + 1) != 0)
 			return false;
-		(void)strcpy(stat->rootdir, resolvedpath);
+		(void)strcpy(stat->rootdir, dir);
+		return true;
+	}
+	return false;
+}
+
+bool
+set_sws_logdir(struct swsstate *stat, char *dir)
+{
+	if (stat == NULL)
+		return false;
+	if (dir == NULL)
+		return false;
+	if (is_valid_dir(dir)) {
+		if (safe_realloc(&stat->logdir, 1, strlen(dir) + 1) != 0)
+			return false;
+		(void)strcpy(stat->logdir, dir);
 		return true;
 	}
 	return false;
@@ -87,15 +93,19 @@ set_sws_rootdir(struct swsstate *stat, char *dir)
 int
 process_sws(const struct swsstate *stat)
 {
-	/*TODO:The return value of this function need
-	 *to be re-evaluated.
-	 */
 	if (stat == NULL)
 		return -1;	
-	bool debugmode;
-	char *ipaddress, *portnumber;	
+	bool cgiflag, debugmode;
+	char *ipaddress, *portnumber, *cgidir, *rootdir, *logdir;	
 	ipaddress = NULL;
-	portnumber = DEFAULT_PORT;	
+	portnumber = NULL;
+	cgidir = NULL;
+	rootdir = NULL;
+	logdir = NULL;
+	if (stat->cgiflag) {
+		cgiflag = stat->cgiflag;
+		cgidir = stat->cgidir;
+	 }
 	if (stat->debuggingflag)
 		debugmode = stat->debuggingflag;
 	if (stat->ipflag)
@@ -105,9 +115,12 @@ process_sws(const struct swsstate *stat)
 	if (stat->usageflag) {
 		usage(STDOUT_FILENO);
 		return 0;
-	}	
+	}
+	if (stat->logflag)
+		logdir = stat->logdir;
+	rootdir = stat->rootdir;
 	struct simpleserver server;
-	if (!init_simpleserver(&server, ipaddress, portnumber, debugmode)) {
+	if (!init_simpleserver(&server, ipaddress, portnumber, debugmode, cgiflag, cgidir, rootdir, logdir)) {
 		close_server(&server);
 		return -1;
 	}
@@ -122,4 +135,14 @@ void
 usage(int fd)
 {
 	(void)dprintf(fd, "usage: sws [ -dh ] [ -c dir ] [ -i address ] [ -l file ] [ -p port ] dir\n");
+}
+
+void 
+free_sws(struct swsstate *stat)
+{
+	free(stat->cgidir);
+	free(stat->rootdir);
+	free(stat->ipaddress);
+	free(stat->portnumber);
+	free(stat->logdir);
 }
