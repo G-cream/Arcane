@@ -320,7 +320,6 @@ accept_connections(struct simpleserver *server)
 				remove_fd(epollfd, sockfd);
 			}
 			else if (events[n].events & EPOLLIN) {
-				printf("lock0");
 				if (read_httpconnection(&server->ctable[sockfd])) {					
 //					append_threadpool(&pool, &server->ctable[sockfd]);
 						//TODO: Check the return value
@@ -351,7 +350,7 @@ setup_server(struct simpleserver *server) {
 	if (server == NULL)
 		return -1;
 	struct addrinfo *reslist;
-	if (CONFIG.debugmode) {
+	if (!CONFIG.debugmode) {
 		if (daemon(1, 1) == -1)
 			return -2;
 	}

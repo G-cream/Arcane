@@ -55,13 +55,15 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 	
-	if (argc == 0) {
-		free_sws(&sws);
-		errx(EXIT_FAILURE, "Dir is missing!\n");
-	}
-	if (argc != 1 || !set_sws_rootdir(&sws, argv[0])) {
-		free_sws(&sws);
-		errx(EXIT_FAILURE, "Root dir is invalid!\n");
+	if (!sws.usageflag) {
+		if (argc == 0) {
+			free_sws(&sws);
+			errx(EXIT_FAILURE, "Dir is missing!\n");
+		}
+		if (argc != 1 || !set_sws_rootdir(&sws, argv[0])) {
+			free_sws(&sws);
+			errx(EXIT_FAILURE, "Root dir is invalid!\n");
+		}
 	}
 	int result = process_sws(&sws);
 	switch (result) {
