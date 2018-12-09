@@ -33,6 +33,8 @@ get_reason_phrase(int statuscode)
 bool 
 init_httpresponse(struct httpresponse *resp)
 {
+	if (resp == NULL)
+		return false;
 	(void)memset(resp->responsebuffer, 0, sizeof(resp->responselength));
 	resp->responselength = 0;
 	resp->statuscode = 0;
@@ -63,12 +65,16 @@ add_response(struct httpresponse *resp, const char* format, ...)
 bool 
 add_status_line(struct httpresponse *resp, int status, const char* title)
 {
+	if (resp == NULL || title == NULL)
+		return false;
 	return add_response(resp, "%s %d %s\r\n", CONFIG.protocolver, status, title);
 }
 
 bool
 add_response_date(struct httpresponse *resp)
 {
+	if (resp == NULL)
+		return false;
 	char serverdate[MAX_DATE_SIZE];
 	get_server_date(serverdate);
 	return add_response(resp, "Date: %s\r\n", serverdate);
@@ -77,12 +83,16 @@ add_response_date(struct httpresponse *resp)
 bool
 add_server(struct httpresponse *resp)
 {
+	if (resp == NULL)
+		return false;
 	return add_response(resp, "Server: %s\r\n", CONFIG.servername);
 }
 
 bool
 add_last_modified(struct httpresponse *resp, struct httprequest *req)
 {
+	if (resp == NULL || req == NULL)
+		return false;
 	char filelmdate[MAX_DATE_SIZE];
 	if (req->isentitygen)
 		get_server_date(filelmdate);
@@ -97,6 +107,8 @@ add_last_modified(struct httpresponse *resp, struct httprequest *req)
 bool
 add_content_type(struct httpresponse *resp, struct httprequest *req)
 {
+	if (resp == NULL || req == NULL)
+		return false;
 	if (req->isentitygen)
 		return add_response(resp, "Content-Type: %s\r\n", "text/html");
 	else {
@@ -110,18 +122,24 @@ add_content_type(struct httpresponse *resp, struct httprequest *req)
 bool
 add_content_length(struct httpresponse *resp, struct httprequest *req)
 {
+	if (resp == NULL || req == NULL)
+		return false;
 	return add_response(resp, "Content-Length: %d\r\n", req->entitybodylength);
 }
 
 bool
 add_null_line(struct httpresponse *resp)
 {
+	if (resp == NULL)
+		return false;
 	return add_response(resp, "%s", "\r\n");
 }
 
 bool
 add_general_headers(struct httpresponse *resp, struct httprequest *req)
 {
+	if (resp == NULL || req == NULL)
+		return false;
 	(void)add_response_date(resp);	
 	return true;
 }
@@ -129,6 +147,8 @@ add_general_headers(struct httpresponse *resp, struct httprequest *req)
 bool
 add_response_headers(struct httpresponse *resp, struct httprequest *req)
 {
+	if (resp == NULL || req == NULL)
+		return false;
 	(void)add_server(resp);
 	return true;
 }
@@ -136,6 +156,8 @@ add_response_headers(struct httpresponse *resp, struct httprequest *req)
 bool 
 add_entity_headers(struct httpresponse *resp, struct httprequest *req)
 {
+	if (resp == NULL || req == NULL)
+		return false;
 	(void)add_last_modified(resp, req);
 	(void)add_content_type(resp, req);
 	(void)add_content_length(resp, req);
@@ -145,12 +167,16 @@ add_entity_headers(struct httpresponse *resp, struct httprequest *req)
 bool
 add_content(struct httpresponse *resp, const char* content)
 {
+	if (resp == NULL || content == NULL)
+		return false;
 	return add_response(resp, "%s", content);
 }
 
 void 
 process_response(struct httpresponse *resp, struct httprequest *req)
 {
+	if (resp == NULL || req == NULL)
+		return;
 	switch (req->requeststate) {
 	case INTERNAL_ERROR:
 		resp->statuscode = 500;

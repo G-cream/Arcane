@@ -101,8 +101,8 @@ insert_server_listentable(struct simpleserver *server, int listenfd)
 	uintmax_t maxsocketnum;
 	if (!get_max_socketnumber(&maxsocketnum))
 		return false;
-	assert(listenfd <= maxsocketnum);
-	if (server->lcount < maxsocketnum) {
+	assert(listenfd <= (int)maxsocketnum);
+	if (server->lcount < (int)maxsocketnum) {
 		server->ltable[server->lcount] = listenfd;
 		++server->lcount;		
 	}
@@ -133,8 +133,8 @@ insert_server_connectiontable(struct simpleserver *server, int pollfd, int connf
 	uintmax_t maxsocketnum;
 	if (!get_max_socketnumber(&maxsocketnum))
 		return false;
-	assert(connfd <= maxsocketnum);
-	if (server->ccount < maxsocketnum) {
+	assert(connfd <= (int)maxsocketnum);
+	if (server->ccount < (int)maxsocketnum) {
 		++server->ccount;
 		if (!init_httpconnection(&server->ctable[connfd], pollfd, connfd, address)) {
 			close_httpconnection(&server->ctable[connfd]);
@@ -271,7 +271,7 @@ accept_connections(struct simpleserver *server)
 				int connfd = accept(sockfd, (struct sockaddr*)&client_address, &client_addrlength);
 				if (connfd < 0)
 					continue;
-				if (server->ccount == maxsocketnum)
+				if (server->ccount == (int)maxsocketnum)
 					continue;
 				(void)insert_server_connectiontable(server, kqueuefd, connfd, (struct sockaddr*)&client_address);
 				(void)add_fd(kqueuefd, connfd, true);
@@ -316,7 +316,7 @@ accept_connections(struct simpleserver *server)
 				int connfd = accept(sockfd, (struct sockaddr*)&client_address, &client_addrlength);
 				if (connfd < 0)
 					continue;
-				if (server->ccount == maxsocketnum)
+				if (server->ccount == (int)maxsocketnum)
 					continue;
 				insert_server_connectiontable(server, epollfd, connfd, (struct sockaddr*)&client_address);
 				add_fd(epollfd, connfd, true);
@@ -374,7 +374,7 @@ close_server(struct simpleserver *server)
 		(void)remove_server_listentable(server, server->ltable[n]);
 	uintmax_t maxsocketnum;
 	(void)get_max_socketnumber(&maxsocketnum);
-	for (int n = 0; n != maxsocketnum; ++n)
+	for (int n = 0; n != (int)maxsocketnum; ++n)
 		(void)remove_server_connectiontable(server, maxsocketnum);
 	destroy_threadpool(&server->pool);
 	destroy_log();

@@ -68,7 +68,6 @@ int
 get_mime(const char* path, char *type)
 {
 	const char *mime;
-	char *mime_ret;
 	magic_t magic;		
 	magic = magic_open(MAGIC_MIME_TYPE);
 	magic_load(magic, NULL);
