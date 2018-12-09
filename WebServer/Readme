@@ -1,0 +1,145 @@
+CS631 Advanced Programming in the UNIX Environment Final Project
+================================================================
+
+This repository will contain the sources for the final project of
+the group 'G_cream'.
+
+Please add your sources, Makefile, tests, etc. here.
+
+Please update this README with whatever additional information you
+may wish to include in your final submission.
+
+Version:
+    SWS 1.1
+
+Introduction:
+    The simple server has two main parts: 
+        1.I/O processing Unit
+        2.Logical processing Unit
+    These two parts work separately and communicate through the request queue of 
+    the thread poll. The connection sockets are all non-blocked, so the thread 
+    poll will not be stuck when read or write.
+    All the requests will be trim(FSM) first to ignore the useless LWS.
+    All the configuations are in the file "config.h".
+
+Method:
+    Support the GET and HEAD method
+
+Code status:
+    200, 304, 400, 403, 404, 500
+
+Message header format:
+    Date: The current timestamp in GMT.
+    Server: A string identifying this server and version.
+    Last-Modified: The timestamp in GMT of the file’s last modification date.
+    Content-Type: text/html or, optionally, the correct content-type for the file in 
+                  question as determined via magic(5) patterns.
+    Content-Length: The size in bytes of the data returned.
+
+SWS 1.0 Supports:
+    1.Accept connections, read input from client.
+    2.Parse and validate input.(Trim all the invalid LWS. Support Http1.0 protocol, get 
+    head method. Append request path to root dir to get the real path. "/~something" will 
+    be retranslated into "/home/something/sws" before appending to root dir. If cgi is 
+    enabled, request path will be cut off the part "/cig-bin", then appended to cgi dir. 
+    Path with "/.." in it is not allowed.)
+    3.Generate proper HTTP codes.
+    4.Log connection information.
+    5.Send headers.
+    6.Send response.
+    7.Close connection.
+
+SWS 1.1 updates:
+    1.Support Kqueue under NetBSD.
+    2.Fix the bug that thread poll may sometimes be stuck.
+    3.Add lock on log functions.
+    4.Support mime functions.
+    5.Fix most of the memory leaks.
+    6.timeout idle connections.
+    7.Fix the bug that head method cannot get the right response when If-Modified-Since is false.
+    8.Fix the bug that when the entity is generated, the server crashes due to memory leak.
+    9.Fix the bug that cannot get the index.html when there is an index.html in the dir.
+    10.Fix the bug that when cgi request do not have "?"(query string), the server responds 404.
+
+Test cases:
+    1.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      request: GET /main.c HTTP/1.0
+      response: 200 with entity
+    2.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /
+      request: GET /main.c HTTP/1.0
+      response: 404
+    3.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      request: HEAD /main.c HTTP/1.0
+      response: 200
+    4.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      request: POST /main.c HTTP/1.0
+      response: 400
+    5.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      file modified date： Sun, 09 Dec 2018 01:13:52 GMT
+      request: GET /main.c HTTP/1.0
+               If-Modified-Since: Sun, 09 Dec 2018 01:13:52 GMT
+      response: 304
+    6.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      file modified date： Sun, 09 Dec 2018 01:13:52 GMT
+      request: GET /main.c HTTP/1.0
+               If-Modified-Since: Sun, 09 Dec 2018 01:13:53 GMT
+      response: 200
+    7.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      file permissions: -rwxr-xr-x changes to -rwxr-x--x
+      request: GET /main.c HTTP/1.0
+               If-Modified-Since: Sun, 09 Dec 2018 01:13:53 GMT
+      response: 403
+    8.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      request: GET /bacon HTTP/1.0
+      response: 404
+    9.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      index.html: no
+      request: GET /Moo HTTP/1.0
+      response: 200 with entity generated
+    10.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      index.html: yes
+      request: GET /Moo HTTP/1.0
+      response: 200 with index.html
+    11.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /
+      exsist file dir: /home/g_cream/sws
+      request: GET /~g_cream HTTP/1.0
+      response: 200 with entity
+    12.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      MAX_URI_SIZE(config.h): 2
+      request: GET /main.c HTTP/1.0
+      response: 400
+    13.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      Protocol: HTTP/1.1
+      request: GET /main.c HTTP/1.1
+      response: 400
+    14.command: ./BSDsws -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      request: GET /../BSDsws/main.c HTTP/1.0
+      response: 400
+    15.command: ./BSDsws -c /home/g_cream/BSD/sws/cgi -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      request: GET /cgi-bin/helloworld.cgi HTTP/1.0
+      response: 200 with entity
+    16.command: ./BSDsws -c /home/g_cream/BSD/sws/cgi -i 192.168.1.60 -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      request: GET /cgi-bin/helloworld.cgi?x=y HTTP/1.0
+      response: 200 with entity
+    17.command: ./BSDsws -c /home/g_cream/BSD/sws/cgi -i 192.168.1.60 -p 80 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      port:80
+      request: GET /cgi-bin/helloworld.cgi?x=y HTTP/1.0
+      response: 200 with entity
+    18../Debug/BSDsws -c /home/g_cream/BSDsws/cgi -p 8888 -l /home/g_cream/BSDsws /home/g_cream/BSDsws
+      telnet: -6 fe80::a00:27ff:feec:9b7f%wm0 8888
+      request: GET /main.c HTTP/1.0
+      response: 200 with entity
+
+Appendix:
+    All the sws work refers mostly from:
+    1.Linux High-performance Server Programming
+    2.UNIX Network Programming
+    3.TCP/IP Illustrated
+    4.http://www.rosettacode.org/wiki/Rosetta_Code
+
+GitHub:
+    https://github.com/G-cream/CS631
+
+PS:
+    When testing, notice the permission of "helloworld.cgi".
+    It should be at least "755".
