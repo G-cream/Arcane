@@ -61,8 +61,7 @@ write_httpconnection(struct httpconnection *connection)
 			if (errno == EAGAIN) {				
 #ifdef _BSD_
 				mod_fd(connection->pollfd, connection->socktfd, EVFILT_WRITE);
-#else
-				mod_fd(connection->pollfd, connection->socktfd, EPOLLOUT);
+#else				mod_fd(connection->pollfd, connection->socktfd, EPOLLOUT);
 #endif // _BSD_
 				return true;
 			}
@@ -86,8 +85,7 @@ process(struct httpconnection *connection)
 	if (request.requeststate == NO_REQUEST) {
 #ifdef _BSD_
 		mod_fd(connection->pollfd, connection->socktfd, EVFILT_READ);
-#else
-		mod_fd(connection->pollfd, connection->socktfd, EPOLLIN);
+#else		mod_fd(connection->pollfd, connection->socktfd, EPOLLIN);
 #endif // _BSD_
 		return true;
 	}	
@@ -109,8 +107,7 @@ process(struct httpconnection *connection)
 	log_message(connection, &request, &response);
 #ifdef _BSD_
 	mod_fd(connection->pollfd, connection->socktfd, EVFILT_WRITE);
-#else
-	mod_fd(connection->pollfd, connection->socktfd, EPOLLOUT);
+#else	mod_fd(connection->pollfd, connection->socktfd, EPOLLOUT);
 #endif // _BSD_	
 
 	return true;
