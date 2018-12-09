@@ -380,10 +380,10 @@ parse_requestpath_username(char *path, char *username, int length)
 {
 	if (path == NULL || username == NULL)
 		return -1;
-	int checkindex;	
+	size_t checkindex;	
 	if (strncmp(path, "/~", 2) == 0 && strncmp(path, "/~/", 3) != 0) {
 		path = path + 2;
-		for (checkindex = 0; checkindex != (int)strlen(path); ++checkindex) {
+		for (checkindex = 0; checkindex != strlen(path); ++checkindex) {
 			if (path[checkindex] == '/' || checkindex == length)
 				break;
 			username[checkindex] = path[checkindex];
