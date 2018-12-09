@@ -119,15 +119,20 @@ process_sws(const struct swsstate *stat)
 	if (stat->logflag)
 		logdir = stat->logdir;
 	rootdir = stat->rootdir;
+	if (!debugmode) {
+		if (daemon(1, 1) == -1)
+			return -1;
+	}
 	struct simpleserver server;
 	if (!init_simpleserver(&server, ipaddress, portnumber, debugmode, cgiflag, cgidir, rootdir, logdir)) {
 		close_server(&server);
-		return -1;
+		return -2;
 	}
 	if (setup_server(&server) != 0) {
 		close_server(&server);
-		return -1;
+		return -3;
 	}
+	close_server(&server);
 	return 0;
 }
 

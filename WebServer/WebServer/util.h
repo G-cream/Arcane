@@ -7,7 +7,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-//#include <magic.h>
+#include <magic.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -21,6 +22,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "config.h"
+#include "threadsyn.h"
 #ifdef _BSD_
 #include <sys/event.h>
 #include <sys/types.h>
@@ -46,12 +48,14 @@
 								(void)strcat(_dirhtml, END_HTML);
 #define DIRHTML					_dirhtml
 
+extern struct sem LOGLOCK;
+
 bool is_valid_ipv4(const char *);
 bool is_valid_ipv6(const char *);
 bool is_valid_portnumber(const char *);
 bool is_valid_dir(const char *);
 bool is_file_accessible(const char *);
-char* get_mime(const char*);
+int get_mime(const char*, char *);
 int get_file_stat(const char *);
 bool get_date_rfc822(char *, const struct tm *);
 bool get_date_rfc850(char *, const struct tm *);
@@ -66,8 +70,12 @@ void mod_fd(int, int, int);
 int safe_realloc(void *, size_t, size_t);
 bool generate_dirhtml(const char *, char *);
 int map_file(char *, void **);
+bool unmap_file(void *, int, bool);
 int ishex(int);
 int decode(const char *, char *);
+bool init_log();
 void logfile(const char *, const char *, const char *, int, int);
+void destroy_log();
+void add_sig(int, void(handler)(int), bool);
 #endif // !_UTIL_
 

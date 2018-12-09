@@ -64,11 +64,13 @@ struct httprequest {
 	int msgbufferlength;
 	int linestartindex;
 	int linecheckindex;
+	char requestline[MAX_LINE_SIZE];
+	int requestlinelength;
 	char *entitybody;
 	int entitybodylength;
 	bool isentitygen;
-	char dirhtmlbuffer[MAX_GENFILE_SIZE];
-	char cgifilebuffer[MAX_GENFILE_SIZE];
+	//char dirhtmlbuffer[MAX_GENFILE_SIZE];
+	//char cgifilebuffer[MAX_GENFILE_SIZE];
 	httpcode requeststate;
 	httpmethod method;
 	char uri[MAX_URI_SIZE];

@@ -66,16 +66,16 @@ main(int argc, char **argv)
 		}
 	}
 	int result = process_sws(&sws);
-	switch (result) {
-	case -1:
+	if (result == -1) {
+		errx(EXIT_FAILURE, "Cannot setup the server!\n");
+		free_sws(&sws);
+		exit(EXIT_FAILURE);
+	}
+	if (result == -2) {
 		errx(EXIT_FAILURE, "The server is crashed!\n");
 		free_sws(&sws);
 		exit(EXIT_FAILURE);
-	default:
-		free_sws(&sws);
-		exit(EXIT_FAILURE);
-		/* NOTREACHED */
-	}	
+	}
 	free_sws(&sws);
 	return EXIT_SUCCESS;
 }

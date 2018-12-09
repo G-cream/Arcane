@@ -25,10 +25,12 @@ struct httpconnection {
 	int socktfd;
 	struct sockaddr_storage address;
 	char readbuffer[MAX_MESSAGE_SIZE];
-	int readindex;
+	int readindex;	
+	char writebuffer[MAX_RESPONSE_SIZE];
 	int writeindex;
 	struct iovec iv[2];
 	int ivcount;
+	bool isentitygen;
 };
 
 bool init_httpconnection(struct httpconnection *, int, int, struct sockaddr *);
@@ -37,5 +39,6 @@ bool write_httpconnection(struct httpconnection *);
 bool process(struct httpconnection *);
 void unmap(struct httpconnection *connection);
 void close_httpconnection(struct httpconnection *);
+void log_message(struct httpconnection *, struct httprequest *, struct httpresponse *);
 
 #endif // !_CONN_

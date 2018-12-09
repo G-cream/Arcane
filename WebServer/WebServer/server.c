@@ -35,18 +35,20 @@ set_config_portnumber(char *portnumber)
 bool 
 set_config_cgidir(char *cgidir)
 {
-	if (cgidir == NULL)
-		return true;
-	char resolvedpath[MAX_PATH_SIZE];
-	if (realpath(cgidir, resolvedpath) == NULL)
-		return false;
-	if (is_valid_dir(resolvedpath)) {
-		if (safe_realloc(&CONFIG.cgidir, 1, strlen(resolvedpath) + 1) != 0)
-			return false;
-		(void)strcpy(CONFIG.cgidir, resolvedpath);
-		return true;
+	if (cgidir == NULL) {
+		CONFIG.cgidir = NULL;
 	}
-	return false;
+	else {
+		char resolvedpath[MAX_PATH_SIZE];
+		if (realpath(cgidir, resolvedpath) == NULL)
+			return false;
+		if (is_valid_dir(resolvedpath)) {
+			if (safe_realloc(&CONFIG.cgidir, 1, strlen(resolvedpath) + 1) != 0)
+				return false;
+			(void)strcpy(CONFIG.cgidir, resolvedpath);			
+		}
+	}
+	return true;
 }
 
 bool
@@ -71,21 +73,23 @@ set_config_rootdir(char *rootdir)
 bool
 set_config_logdir(char *logdir)
 {
-	if (logdir == NULL)
-		return true;
-	char resolvedpath[MAX_PATH_SIZE];
-	if (realpath(logdir, resolvedpath) == NULL)
-		return false;
-	if (get_file_stat(resolvedpath) == 1)
-		(void)strcat(resolvedpath, "/swslog.txt");	
-	FILE *f; 
-	if ((f = fopen("catpath", "a+")) == NULL)
-		return false;
-	(void)fclose(f);
-	if (safe_realloc(&CONFIG.logdir, 1, strlen(resolvedpath) + 1) != 0)
-		return false;
-	(void)strcpy(CONFIG.logdir, resolvedpath);
-	//sem_post(&LOGLOCK);
+	if (logdir == NULL) {
+		CONFIG.logdir = NULL;
+	}
+	else {
+		char resolvedpath[MAX_PATH_SIZE];
+		if (realpath(logdir, resolvedpath) == NULL)
+			return false;
+		if (get_file_stat(resolvedpath) == 1) {
+			(void)strcat(resolvedpath, "/");
+			(void)strcat(resolvedpath, DEFAULT_LOG_NAME); 
+		}
+		if (safe_realloc(&CONFIG.logdir, 1, strlen(resolvedpath) + 1) != 0)
+			return false;
+		(void)strcpy(CONFIG.logdir, resolvedpath);
+		if (!init_log())
+			return false;
+	}
 	return true;
 }
 
@@ -110,9 +114,14 @@ remove_server_listentable(struct simpleserver *server, int listenfd)
 {
 	if (server == NULL)
 		return false;
-	close(server->ltable[listenfd]);
-	server->ltable[listenfd] = 0;
-	--server->lcount;
+	for (int n = 0; n != server->lcount; ++n) {
+		if (server->ltable[n] == listenfd) {
+			close(server->ltable[n]);
+			server->ltable[n] = 0;
+			--server->lcount;
+			break;
+		}
+	}
 	return true;
 }
 
@@ -171,11 +180,13 @@ init_simpleserver(struct simpleserver * server, char *ipaddress,
 	(void)memset(server->ltable, 0, maxsocketnum * sizeof(int));
 	if (safe_realloc(&server->ctable, maxsocketnum, sizeof(struct httpconnection)) != 0)
 		return false;
-	(void)memset(server->ctable, 0, maxsocketnum * sizeof(struct httpconnection));	
+	(void)memset(server->ctable, 0, maxsocketnum * sizeof(struct httpconnection));
+	if (!init_threadpool(&server->pool, DEFAULT_THREAD_NUM, DEFAULT_CONN_NUM))
+		return false;
 	CONFIG.debugmode = debugmode;
 	CONFIG.cgienabled = cgienabled;
-	CONFIG.protocolver = "HTTP/1.0";
-	CONFIG.servername = "SWS 1.0";
+	CONFIG.protocolver = DEFAULT_PROTOCOL_NAME;
+	CONFIG.servername = DEFAULT_SERVER_NAME;
 	return true;
 }
 
@@ -197,19 +208,19 @@ listen_connections(struct simpleserver *server, struct addrinfo *reslist) {
 		return -1;
 	struct addrinfo *p;
 	for (p = reslist; p != NULL; p = p->ai_next) {
-#ifdef DEBUG
-		char addrdst[20];
-		if (p->ai_family == AF_INET) {
-			inet_ntop(p->ai_family, &((struct sockaddr_in *)p->ai_addr)->sin_addr, addrdst, 20);
-			printf("IP: %s\n", addrdst);
-			printf("Port: %u\n", ntohs(((struct sockaddr_in *)p->ai_addr)->sin_port));
-		}
-		if (p->ai_family == AF_INET6) {
-			inet_ntop(p->ai_family, &((struct sockaddr_in6 *)p->ai_addr)->sin6_addr, addrdst, 20);
-			printf("IP: %s\n", addrdst);
-			printf("Port: %u\n", ntohs(((struct sockaddr_in6 *)p->ai_addr)->sin6_port));
-		}	  
-#endif // DEBUG
+//#ifdef DEBUG
+//		char addrdst[20];
+//		if (p->ai_family == AF_INET) {
+//			inet_ntop(p->ai_family, &((struct sockaddr_in *)p->ai_addr)->sin_addr, addrdst, 20);
+//			printf("IP: %s\n", addrdst);
+//			printf("Port: %u\n", ntohs(((struct sockaddr_in *)p->ai_addr)->sin_port));
+//		}
+//		if (p->ai_family == AF_INET6) {
+//			inet_ntop(p->ai_family, &((struct sockaddr_in6 *)p->ai_addr)->sin6_addr, addrdst, 20);
+//			printf("IP: %s\n", addrdst);
+//			printf("Port: %u\n", ntohs(((struct sockaddr_in6 *)p->ai_addr)->sin6_port));
+//		}	  
+//#endif // DEBUG
 		int listenfd, optval, backlog;
 		optval = 1;
 		backlog = CONFIG.debugmode ? 1 : MAX_LISTEN;
@@ -217,7 +228,6 @@ listen_connections(struct simpleserver *server, struct addrinfo *reslist) {
 		listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 		if (listenfd < 0)
 			continue;
-		/*TODO:need to be tested*/
 		if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval, sizeof(int)) < 0)
 			continue;
 		if (bind(listenfd, p->ai_addr, p->ai_addrlen) != 0) {
@@ -228,7 +238,10 @@ listen_connections(struct simpleserver *server, struct addrinfo *reslist) {
 			close(listenfd);
 			continue;
 		}
-		insert_server_listentable(server, listenfd);
+		if (!insert_server_listentable(server, listenfd)) {
+			remove_server_listentable(server, listenfd);
+			continue;
+		}
 	}
 	return 0;
 }
@@ -241,9 +254,6 @@ accept_connections(struct simpleserver *server)
 	uintmax_t maxsocketnum;
 	if (!get_max_socketnumber(&maxsocketnum))
 		return -2;
-	struct threadpool pool;
-	if (!init_threadpool(&pool, DEFAULT_THREAD_NUM, DEFAULT_CONN_NUM))
-		return -3;
 #ifdef _BSD_
 	struct kevent events[maxsocketnum];
 	int kqueuefd = kqueue();
@@ -252,7 +262,6 @@ accept_connections(struct simpleserver *server)
 	for (;;) {
 		int number = kevent(kqueuefd, NULL, 0, events, maxsocketnum, NULL);
 		if ((number < 0) && (errno != EINTR))
-			//TODO: the errno should be logged
 			break;
 		for (int n = 0; n < number; ++n) {
 			int sockfd = events[n].ident;
@@ -264,28 +273,27 @@ accept_connections(struct simpleserver *server)
 					continue;
 				if (server->ccount == maxsocketnum)
 					continue;
-				insert_server_connectiontable(server, connfd, (struct sockaddr*)&client_address);
-				add_fd(kqueuefd, connfd, true);
+				(void)insert_server_connectiontable(server, kqueuefd, connfd, (struct sockaddr*)&client_address);
+				(void)add_fd(kqueuefd, connfd, true);
 			}
 			else if (events[n].flags & (EV_EOF | EV_ERROR)) {
-				remove_server_connectiontable(server, sockfd);
-				remove_fd(kqueuefd, sockfd);
+				(void)remove_server_connectiontable(server, sockfd);
+				(void)remove_fd(kqueuefd, sockfd);
 			}
-			else if (events[n].fflags & EVFILT_READ) {
+			else if (events[n].filter == EVFILT_READ) {
 				if (read_httpconnection(&server->ctable[sockfd])) {
-					append_threadpool(&pool, &server->ctable[sockfd]);
+					(void)append_threadpool(&server->pool, &server->ctable[sockfd]);
 					continue;
 				}
 				else {
-					remove_server_connectiontable(server, sockfd);
-					remove_fd(kqueuefd, sockfd);
+					(void)remove_server_connectiontable(server, sockfd);
+					(void)remove_fd(kqueuefd, sockfd);
 				}
 			}
-			else if (events[n].fflags & EVFILT_WRITE) {
-				if (!write_httpconnection(&server->ctable[sockfd])) {
-					remove_server_connectiontable(server, sockfd);
-					remove_fd(kqueuefd, sockfd);
-				}
+			else if (events[n].filter == EVFILT_WRITE) {
+				(void)write_httpconnection(&server->ctable[sockfd]);
+				(void)remove_server_connectiontable(server, sockfd);
+				(void)remove_fd(kqueuefd, sockfd);
 			}
 			else
 				continue;
@@ -298,9 +306,7 @@ accept_connections(struct simpleserver *server)
 		add_fd(epollfd, server->ltable[n], false);
 	for (;;) {
 		int number = epoll_wait(epollfd, events, maxsocketnum, -1);
-		printf("epoll");
 		if ((number < 0) && (errno != EINTR))
-			//TODO: the errno should be logged
 			break;
 		for (int n = 0; n < number; ++n) {
 			int sockfd = events[n].data.fd;
@@ -321,9 +327,8 @@ accept_connections(struct simpleserver *server)
 			}
 			else if (events[n].events & EPOLLIN) {
 				if (read_httpconnection(&server->ctable[sockfd])) {					
-//					append_threadpool(&pool, &server->ctable[sockfd]);
-						//TODO: Check the return value
-					process(&server->ctable[sockfd]); 
+					append_threadpool(&server->pool, &server->ctable[sockfd]);
+//					process(&server->ctable[sockfd]); 
 					continue;
 				}
 				else {
@@ -332,7 +337,7 @@ accept_connections(struct simpleserver *server)
 				}
 			}
 			else if (events[n].events & EPOLLOUT) {
-				write_httpconnection(&server->ctable[sockfd]);
+				(void)write_httpconnection(&server->ctable[sockfd]);
 				remove_server_connectiontable(server, sockfd);
 				remove_fd(epollfd, sockfd);
 			}
@@ -349,17 +354,15 @@ int
 setup_server(struct simpleserver *server) {
 	if (server == NULL)
 		return -1;
+	add_sig(SIGPIPE, SIG_IGN, true);
 	struct addrinfo *reslist;
-	if (!CONFIG.debugmode) {
-		if (daemon(1, 1) == -1)
-			return -2;
-	}
 	if (get_tcpaddrs(server, &reslist) != 0) 
-		return -3;
+		return -2;
 	if (listen_connections(server, reslist) != 0) 
-		return -4;
+		return -3;
 	if (accept_connections(server) != 0) 
-		return -5;
+		return -4;
+	//might leak here.
 	freeaddrinfo(reslist);
 	return 0;
 }
@@ -367,8 +370,19 @@ setup_server(struct simpleserver *server) {
 void
 close_server(struct simpleserver *server)
 {
+	for (int n = 0; n != server->lcount; ++n)
+		(void)remove_server_listentable(server, server->ltable[n]);
+	uintmax_t maxsocketnum;
+	(void)get_max_socketnumber(&maxsocketnum);
+	for (int n = 0; n != maxsocketnum; ++n)
+		(void)remove_server_connectiontable(server, maxsocketnum);
+	destroy_threadpool(&server->pool);
+	destroy_log();
 	free(CONFIG.ipaddress);
 	free(CONFIG.portnumber);
+	free(CONFIG.cgidir);
+	free(CONFIG.rootdir);
+	free(CONFIG.logdir);
 	free(server->ltable);
 	free(server->ctable);
 }

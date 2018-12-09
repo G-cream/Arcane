@@ -5,16 +5,7 @@ init_httprequest(struct httprequest *req)
 {
 	if (req == NULL)
 		return false;
-	(void)memset(req->msgbuffer, 0, sizeof(req->msgbuffer));
-	(void)memset(req->uri, 0, sizeof(req->uri));
-	(void)memset(req->dirhtmlbuffer, 0, sizeof(req->dirhtmlbuffer));
-	(void)memset(req->cgifilebuffer, 0, sizeof(req->cgifilebuffer));
-	(void)memset(req->abspath, 0, sizeof(req->abspath));
-	(void)memset(req->imsdate, 0, sizeof(req->imsdate));
-	req->msgbufferlength = 0;
-	req->linestartindex = 0;
-	req->linecheckindex = 0;
-	req->entitybodylength = 0;
+	(void)memset(req, 0, sizeof(struct httprequest));
 	req->isentitygen = false;
 	req->requeststate = NO_REQUEST;
 	req->method = GET;
@@ -172,6 +163,11 @@ trim_request(char *newbuffer, int newbuffersize, char *oldbuffer, int oldbuffers
 	return newbufferindex;
 }
 
+/*
+ *Trim function secures the safty of invoking readline function.
+ *If there is only one character in the msgbuffer, readline function
+ *will crash at req->msgbuffer[req->linecheckindex - 1].
+ */
 linestate 
 readline(struct httprequest *req, char *linebuffer, int length)
 {
@@ -229,6 +225,10 @@ parse_requestline(struct httprequest *req, char *line)
 	
 	currentstring = strtok_r(NULL, " \t\r\n", &saveptr);
 	if (currentstring == NULL) {
+		req->requeststate = BAD_REQUEST;
+		return false;
+	}
+	if (strlen(currentstring) >= MAX_URI_SIZE) {
 		req->requeststate = BAD_REQUEST;
 		return false;
 	}
@@ -381,8 +381,8 @@ parse_requestpath_username(char *path, char *username, int length)
 	if (path == NULL || username == NULL)
 		return -1;
 	int checkindex;	
-	if (strncmp(path, "~", 1) == 0 && strncmp(path, "~/", 2) != 0) {
-		path = path + 1;
+	if (strncmp(path, "/~", 2) == 0 && strncmp(path, "/~/", 3) != 0) {
+		path = path + 2;
 		for (checkindex = 0; checkindex != strlen(path); ++checkindex) {
 			if (path[checkindex] == '/' || checkindex == length)
 				break;
@@ -408,7 +408,7 @@ parse_requestpath(struct httprequest *req)
 	char username[MAX_PATH_SIZE];
 	int checkindex, predictedpathlength;
 	checkindex = 0;
-	decode(req->uri, decodedpath);
+	(void)decode(req->uri, decodedpath);
 	if (req->iscgi) {
 		checkindex += strlen("/cgi-bin");
 		predictedpathlength = strlen(CONFIG.cgidir) + strlen(decodedpath) + 1 - checkindex;
@@ -425,7 +425,7 @@ parse_requestpath(struct httprequest *req)
 		int usernamelength;
 		usernamelength = parse_requestpath_username(decodedpath, username, MAX_PATH_SIZE);
 		if (usernamelength > 0) {
-			checkindex += usernamelength + 1;
+			checkindex += usernamelength + 2;
 			predictedpathlength = strlen("/home/") + strlen("/sws/") + strlen(decodedpath);
 			if (predictedpathlength > MAX_PATH_SIZE) {
 				//status code: 414
@@ -510,7 +510,6 @@ generate_cigbody(struct httprequest *req)
 	if (pid == -1)
 		return false;
 	if (pid == 0) {
-		printf("!");
 		if(dup2(pipefd[1], STDOUT_FILENO) == -1 && errno != EINTR)
 			return false;
 		close(pipefd[0]);
@@ -519,12 +518,13 @@ generate_cigbody(struct httprequest *req)
 	}
 	else {
 		close(pipefd[1]);
-		int readlength;
-		int index;
+		int readlength, index;
 		readlength = 0;
 		index = 0;
+		if (safe_realloc(&req->entitybody, 1, MAX_GENFILE_SIZE) != 0)
+			return false;
 		for (;;) {
-			readlength = read(pipefd[0], req->cgifilebuffer + index, sizeof(req->cgifilebuffer));
+			readlength = read(pipefd[0], req->entitybody + index, MAX_GENFILE_SIZE - index);
 			index += readlength;
 			if (readlength == -1 && errno != EINTR)
 				return false;
@@ -532,9 +532,10 @@ generate_cigbody(struct httprequest *req)
 				break;			
 		}
 		close(pipefd[0]);
-		req->cgifilebuffer[index] = '\0';
+		req->entitybody[index] = '\0';
 		if (wait(&status) == -1 || WIFEXITED(status) == 0) 
 			return false;
+		(void)unsetenv("QUERY_STRING");
 	}
 	return true;
 }
@@ -551,8 +552,9 @@ get_entitybody(struct httprequest *req)
 			req->requeststate = INTERNAL_ERROR;
 			return false;
 		}
-		req->entitybodylength = strlen(req->cgifilebuffer);
+		req->entitybodylength = strlen(req->entitybody);
 		req->requeststate = FILE_REQUEST;
+		req->isentitygen = true;
 		return true;
 	}
 	//dir
@@ -562,8 +564,8 @@ get_entitybody(struct httprequest *req)
 			req->requeststate = INTERNAL_ERROR;
 			return false;
 		}
-		strcpy(localindexpath, req->abspath);
-		strcat(localindexpath, "/index.html");
+		(void)strcpy(localindexpath, req->abspath);
+		(void)strcat(localindexpath, "/index.html");
 		if (is_file_accessible(localindexpath)) {
 			void *mapaddr;
 			int filesize;
@@ -575,14 +577,17 @@ get_entitybody(struct httprequest *req)
 			req->entitybody = (char *)mapaddr;
 			req->entitybodylength = filesize;	
 			req->requeststate = FILE_REQUEST;
+			return true;
 		}
 		else {
-			if (!generate_dirhtml(req->abspath, req->dirhtmlbuffer)) {
+			if (safe_realloc(&req->entitybody, 1, MAX_GENFILE_SIZE) != 0)
+				return false;
+			if (!generate_dirhtml(req->abspath, req->entitybody)) {
 				req->requeststate = INTERNAL_ERROR;
 				return false;
 			}
-			req->entitybody = req->dirhtmlbuffer;
-			req->entitybodylength = strlen(req->dirhtmlbuffer);
+//			req->entitybody = req->dirhtmlbuffer;
+			req->entitybodylength = strlen(req->entitybody);
 			req->requeststate = FILE_REQUEST;
 			req->isentitygen = true;
 			return true;
@@ -626,8 +631,8 @@ do_headmethod(struct httprequest *req)
 		return false;
 	if (!parse_requestpath(req))
 		return false;
-	if (!check_modified(req))
-		return false;
+	if (check_modified(req) && req->requeststate != NOT_CHANGED)
+		req->requeststate = HEAD_REQUEST;
 	return true;
 }
 
@@ -668,7 +673,9 @@ process_request(struct httprequest *req, char *message,  int length)
 		ls = readline(req, linebuffer, MAX_LINE_SIZE);
 		if (ls == LINE_OK) {
 			switch (cs) {
-			case CHECK_REQUESTLINE: 
+			case CHECK_REQUESTLINE:
+				(void)memcpy(req->requestline, linebuffer, MAX_LINE_SIZE);
+				req->requestlinelength = strlen(linebuffer);
 				(void)parse_requestline(req, linebuffer);
 				if (req->requeststate == BAD_REQUEST)
 					return true;

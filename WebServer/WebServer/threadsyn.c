@@ -11,7 +11,7 @@ init_sem(struct sem *s)
 {
 	if (s == NULL)
 		return false;
-	if (sem_init(&s->threadsem, 0, 0) != 0)
+	if (sem_init(&s->threadsem, 0, 100) != 0)
 		return false;
 	return true;
 }

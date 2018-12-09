@@ -27,6 +27,7 @@ struct simpleserver {
 	int lcount;
 	struct httpconnection *ctable;
 	int ccount;
+	struct threadpool pool;
 };
 
 bool set_config_ipaddress(char *);

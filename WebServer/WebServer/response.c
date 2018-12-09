@@ -33,7 +33,7 @@ get_reason_phrase(int statuscode)
 bool 
 init_httpresponse(struct httpresponse *resp)
 {
-	memset(resp->responsebuffer, 0, sizeof(resp->responselength));
+	(void)memset(resp->responsebuffer, 0, sizeof(resp->responselength));
 	resp->responselength = 0;
 	resp->statuscode = 0;
 	return true;
@@ -99,8 +99,12 @@ add_content_type(struct httpresponse *resp, struct httprequest *req)
 {
 	if (req->isentitygen)
 		return add_response(resp, "Content-Type: %s\r\n", "text/html");
-	else
-		return add_response(resp, "Content-Type: %s\r\n", get_mime(req->abspath));
+	else {
+		char contenttype[MAX_TYPE_SIZE];
+		if(get_mime(req->abspath, contenttype) == 0)
+			(void)strcpy(contenttype, "unknown");
+		return add_response(resp, "Content-Type: %s\r\n", contenttype);
+	}
 }
 
 bool
@@ -150,42 +154,48 @@ process_response(struct httpresponse *resp, struct httprequest *req)
 	switch (req->requeststate) {
 	case INTERNAL_ERROR:
 		resp->statuscode = 500;
-		add_status_line(resp, 500, get_reason_phrase(500));
+		(void)add_status_line(resp, 500, get_reason_phrase(500));
 		(void)add_general_headers(resp, req);
 		(void)add_response_headers(resp, req);
 		(void)add_null_line(resp);
 		break;
 	case BAD_REQUEST:
 		resp->statuscode = 400;
-		add_status_line(resp, 400, get_reason_phrase(500));
+		(void)add_status_line(resp, 400, get_reason_phrase(500));
 		(void)add_general_headers(resp, req);
 		(void)add_response_headers(resp, req);
 		(void)add_null_line(resp);
 		break;
 	case NO_RESOURCE:
 		resp->statuscode = 404;
-		add_status_line(resp, 404, get_reason_phrase(404));
+		(void)add_status_line(resp, 404, get_reason_phrase(404));
 		(void)add_general_headers(resp, req);
 		(void)add_response_headers(resp, req);
 		(void)add_null_line(resp);
 		break;
 	case FORBIDDEN_REQUEST:
 		resp->statuscode = 403;
-		add_status_line(resp, 403, get_reason_phrase(403));
+		(void)add_status_line(resp, 403, get_reason_phrase(403));
 		(void)add_general_headers(resp, req);
 		(void)add_response_headers(resp, req);
 		(void)add_null_line(resp);
 		break;
 	case NOT_CHANGED:
 		resp->statuscode = 304;
-		add_status_line(resp, 304, get_reason_phrase(304));
+		(void)add_status_line(resp, 304, get_reason_phrase(304));
 		(void)add_general_headers(resp, req);
 		(void)add_response_headers(resp, req);
 		(void)add_null_line(resp);
 		break;
+	case HEAD_REQUEST:
+		resp->statuscode = 200;
+		(void)add_status_line(resp, 200, get_reason_phrase(200));
+		(void)add_general_headers(resp, req);
+		(void)add_response_headers(resp, req);
+		(void)add_null_line(resp);
 	case FILE_REQUEST:
 		resp->statuscode = 200;
-		add_status_line(resp, 200, get_reason_phrase(200));
+		(void)add_status_line(resp, 200, get_reason_phrase(200));
 		(void)add_general_headers(resp, req);
 		(void)add_response_headers(resp, req);
 		(void)add_entity_headers(resp, req);

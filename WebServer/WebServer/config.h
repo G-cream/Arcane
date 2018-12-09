@@ -1,9 +1,9 @@
 #ifndef _CONFIG_
 #define _CONFIG_
 
-#include <semaphore.h>
 #include <stdbool.h>
 
+#define MAX_TYPE_SIZE 255
 #define MAX_PATH_SIZE 255
 #define MAX_DATE_SIZE 100
 #define MAX_GENFILE_SIZE 4096
@@ -16,6 +16,9 @@
 #define DEFAULT_PORT "8080"
 #define DEFAULT_THREAD_NUM 5
 #define DEFAULT_CONN_NUM 100
+#define DEFAULT_LOG_NAME "swslog.txt"
+#define DEFAULT_PROTOCOL_NAME "HTTP/1.0"
+#define DEFAULT_SERVER_NAME "SWS 1.1"
 
 struct serverconfig
 {
@@ -31,5 +34,5 @@ struct serverconfig
 };
 
 extern struct serverconfig CONFIG;
-extern sem_t LOGLOCK;
+
 #endif // !_CONFIG_

@@ -64,22 +64,20 @@ is_file_accessible(const char *path)
 	return false;
 }
 
-char*
-get_mime(const char* buffer)
+int
+get_mime(const char* path, char *type)
 {
-	//		const char *mime;
-	//		char *mime_ret;
-	//		magic_t magic;
-	//	
-	//		magic = magic_open(MAGIC_MIME_TYPE);
-	//		magic_load(magic, NULL);
-	//		magic_compile(magic, NULL);
-	//		mime = magic_file(magic, path);
-	//		mime_ret = generate_str(mime);
-	//		magic_close(magic);
-	//	
-	//		return mime_ret;
-		return "TEST TYPE";
+	const char *mime;
+	char *mime_ret;
+	magic_t magic;		
+	magic = magic_open(MAGIC_MIME_TYPE);
+	magic_load(magic, NULL);
+	mime = magic_file(magic, path);
+	if (mime == NULL)
+		mime = "";
+	(void)strcpy(type, mime);
+	magic_close(magic);	
+	return strlen(type);
 }
 
 int
@@ -138,10 +136,6 @@ get_server_date(char *date)
 	(void)get_date_rfc822(date, gmtime(&timep));
 }
 
-/*TODO:Everytime, read a new maxsock,
- *what if others shrink the maxsock when socketnumber is
- *already that big. What should the system do?
- */
 bool
 get_max_socketnumber(uintmax_t *maxsocketnumber)
 {
@@ -192,7 +186,6 @@ generate_dirhtml(const char *path, char *dirhtml)
 		return false;
 	dircount = scandir(resolvedpath, &dirlist, 0, alphasort);
 	BEGIN_DIRHTML
-		printf("%s", "xxx");
 		for(int n = 0 ; n != dircount ; ++n) {
 		if (dirlist[n]->d_name[0] != '.') {
 			(void)lstat(resolvedpath, &st);
@@ -201,7 +194,7 @@ generate_dirhtml(const char *path, char *dirhtml)
 		}
 	}
 	END_DIRHTML
-	strcpy(dirhtml, DIRHTML);
+	(void)strcpy(dirhtml, DIRHTML);
 	return true;
 }
 
@@ -216,6 +209,20 @@ map_file(char *abspath, void **mapaddr)
 	*mapaddr = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	close(fd);
 	return st.st_size;
+}
+
+bool 
+unmap_file(void *address, int length, bool needfree)
+{
+	if (address == NULL)
+		return false;
+	if (length <= 0)
+		return false;
+	if (needfree)
+		free(address);
+	else
+		(void)munmap(address, length);
+		return true;
 }
 
 int 
@@ -238,8 +245,10 @@ decode(const char *s, char *dec)
 		c = *s++;
 		if (c == '+') 
 			c = ' ';
-		if (c == '?')
+		if (c == '?') {
 			setenv("QUERY_STRING", s, 1);
+			c = '\0';
+		}
 		else if (c == '%' && (!ishex(*s++)	||
 					!ishex(*s++)	||
 					!sscanf(s - 2, "%2x", &c)))
@@ -251,13 +260,27 @@ decode(const char *s, char *dec)
 	return o - dec;
 }
 
+struct sem LOGLOCK;
+
+bool 
+init_log()
+{
+	if (!init_sem(&LOGLOCK))
+		return false;
+	if (!post_sem(&LOGLOCK))
+		return false;
+	return true;
+}
+
 void 
 logfile(const char* remoteip, const char* requesttime, 
 	const char *statusline, int statuscode, int contentlength)
 {
-	//sem_wait(&LOGLOCK);
+	if (CONFIG.logdir == NULL)
+		return;
+	(void)wait_sem(&LOGLOCK);
 	if (CONFIG.debugmode) {
-		fprintf(stdout,
+		(void)fprintf(stdout,
 			"%s %s %s %d %d\n", 
 			remoteip,
 			requesttime,
@@ -270,7 +293,7 @@ logfile(const char* remoteip, const char* requesttime,
 		FILE *f;
 		if ((f = fopen(CONFIG.logdir, "a+")) == NULL)
 			return;
-		fprintf(f,
+		(void)fprintf(f,
 			"%s %s %s %d %d\n", 
 			remoteip,
 			requesttime,
@@ -279,13 +302,31 @@ logfile(const char* remoteip, const char* requesttime,
 			contentlength);
 		(void)fclose(f);
 	}
-	//sem_post(&LOGLOCK);
+	(void)post_sem(&LOGLOCK);
+}
+
+void
+destroy_log()
+{
+	destroy_sem(&LOGLOCK);
+}
+
+void
+add_sig(int sig, void(handler)(int), bool restart)
+{
+	struct sigaction sa;
+	(void)memset(&sa, '\0', sizeof(sa));
+	sa.sa_handler = handler;
+	if (restart)
+		sa.sa_flags |= SA_RESTART;
+	(void)sigfillset(&sa.sa_mask);
+	assert(sigaction(sig, &sa, NULL) != -1);
 }
 
 #ifdef _BSD_
 
 void 
-addfd(int kqueuefd, int fd, bool oneshot)
+add_fd(int kqueuefd, int fd, bool oneshot)
 {
 	struct kevent event;
 	int flag = EV_ADD | EV_CLEAR | EV_EOF;
@@ -297,7 +338,7 @@ addfd(int kqueuefd, int fd, bool oneshot)
 }
 
 void 
-removefd(int kqueuefd, int fd)
+remove_fd(int kqueuefd, int fd)
 {
 	struct kevent event;
 	EV_SET(&event, fd, EV_DELETE, 0, 0, 0, NULL);
@@ -306,11 +347,11 @@ removefd(int kqueuefd, int fd)
 }
 
 void 
-modfd(int kqueuefd, int fd, int ev)
+mod_fd(int kqueuefd, int fd, int ev)
 {
 	struct kevent event;
-	int flag = EV_ADD | EV_CLEAR | EV_EOF;
-	EV_SET(&event, fd, ev, EV_CLEAR | EV_EOF | EV_ONESHOT, 0, 0, NULL);
+	int flag = EV_ADD | EV_CLEAR | EV_EOF | EV_ONESHOT;
+	EV_SET(&event, fd, ev, flag, 0, 0, NULL);
 	kevent(kqueuefd, &event, 1, NULL, 0, NULL);
 }
 

@@ -89,6 +89,12 @@ init_threadpool(struct threadpool *pool, int threadnumber, int maxconns)
 	if (threadnumber <= 0 || maxconns <= 0)
 		return false;
 	(void)memset(pool, 0, sizeof(struct threadpool));
+	if (!init_sem(&pool->queuestat))
+		return false;
+	if (!init_locker(&pool->queuelocker))
+		return false;
+	if (!init_connqueue(&pool->workqueue))
+		return false;
 	if (safe_realloc(&pool->threads, threadnumber, sizeof(pthread_t)) != 0)
 		return false;
 	for (int n = 0; n != threadnumber; ++n) {
@@ -101,12 +107,6 @@ init_threadpool(struct threadpool *pool, int threadnumber, int maxconns)
 			return false;
 		}			
 	}
-	if (!init_sem(&pool->queuestat))
-		return false;
-	if (!init_locker(&pool->queuelocker))
-		return false;
-	if (!init_connqueue(&pool->workqueue))
-		return false;
 	pool->threadnumber = threadnumber;
 	pool->maxconns = maxconns;
 	pool->stop = false;
@@ -126,7 +126,9 @@ append_threadpool(struct threadpool *pool, struct httpconnection *conn)
 		return false;
 	}
 	(void)unlock(&pool->queuelocker);
-	(void)post_sem(&pool->queuestat);
+	if (post_sem(&pool->queuestat) == 0) {
+		return false;
+	}
 	return true;
 }
 
@@ -149,8 +151,8 @@ worker(void *arg)
 		}
 		(void)unlock(&pool->queuelocker);
 		if (conn != NULL) {
-			//TODO: Check the return value
-			process(conn); 
+			if(!process(conn))
+				close_httpconnection(conn);
 		}		
 	}
 	return pool;
