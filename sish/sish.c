@@ -1,10 +1,8 @@
-#include <iostream>
+#include "sish.h"
 
-using namespace std;
-
-int main(int argc, char *argv[])
+int run_command(char *command)
 {
-	char sz[] = "Hello, World!";	//Hover mouse over "sz" while debugging to see its contents
-	cout << sz << endl;	//<================= Put a breakpoint here
-	return 0;
+	struct parser commandparser;
+	if (!parse_command(&commandparser, command))
+		return -1;
 }

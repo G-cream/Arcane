@@ -1,0 +1,2 @@
+﻿  VisualGDB: Run "gmake  CONFIG=Debug clean" in directory "/home/g_cream/sish" on g_cream@192.168.1.60 (SSH)
+  rm -rf Debug
