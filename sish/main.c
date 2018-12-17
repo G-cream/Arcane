@@ -18,7 +18,7 @@ main(int argc, char **argv)
 		case 'c':
 			CONFIG.cflag = true;
 			if(!set_command(optarg))
-				errx(EXIT_FAILURE, "Command format is invalid!\n");
+				errx(127, "Command format is invalid!\n");
 			break;
 		case 'x':
 			CONFIG.xflag = true;
@@ -26,14 +26,14 @@ main(int argc, char **argv)
 		case '?':
 		default:
 			usage();
-			errx(EXIT_FAILURE, "argvs are invalid!\n");
+			errx(127, "argvs are invalid!\n");
 		}
 	}
 	argc -= optind;
 	argv += optind;
 	if (argc > 0) {
 		usage();
-		errx(EXIT_FAILURE, "argvs are invalid!\n");
+		errx(127, "argvs are invalid!\n");
 	}
 	if (CONFIG.cflag)
 		run_onecommand();
@@ -48,11 +48,11 @@ run_onecommand()
 	int retcode;
 	retcode = run_command();
 	if (retcode == -1)
-		errx(EXIT_FAILURE, "Inner error!\n");
+		errx(127, "Inner error!\n");
 	if (retcode == -2)
-		warnx("Lexical syntax error!\n");
+		errx(127, "Lexical syntax error!\n");
 	if (retcode == -3)
-		warnx("Syntactic syntax error!\n");
+		errx(127, "Syntactic syntax error!\n");
 	//exit
 	if(retcode == 1)
 		return;
@@ -62,10 +62,21 @@ void
 loop_command()
 {
 	char commandtext[MAX_COMMANDTEXT_SIZE];	
-	while (fgets(commandtext, MAX_COMMANDTEXT_SIZE, stdin) != NULL)
-		run_onecommand();
+	while (fgets(commandtext, MAX_COMMANDTEXT_SIZE, stdin) != NULL) {
+		int retcode;
+		retcode = run_command();
+		if (retcode == -1)
+			errx(127, "Inner error!\n");
+		if (retcode == -2)
+			warnx("Lexical syntax error!\n");
+		if (retcode == -3)
+			warnx("Syntactic syntax error!\n");
+		//exit
+		if(retcode == 1)
+			return;
+	}
 	if (ferror(stdin))
-		errx(EXIT_FAILURE, "Inputs command error!\n");
+		errx(127, "Inputs command error!\n");
 	return;
 }
 
