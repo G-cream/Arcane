@@ -6,6 +6,7 @@
 #include "sish.h"
 
 void usage(void);
+void run_onecommand();
 void loop_command();
 
 int
@@ -34,26 +35,35 @@ main(int argc, char **argv)
 		usage();
 		errx(EXIT_FAILURE, "argvs are invalid!\n");
 	}
-	if (CONFIG.cflag) {
-		if (run_command() == -1)
-			errx(EXIT_FAILURE, "Inner error!\n");
-	}
+	if (CONFIG.cflag)
+		run_onecommand();
 	else
 		loop_command();
 	return EXIT_SUCCESS;
 }
 
-void loop_command()
+void 
+run_onecommand()
 {
-	char command[MAX_COMMAND_SIZE];	
-	while (fgets(command, MAX_COMMAND_SIZE, stdin) != NULL) {
-		int retcode;
-		retcode = run_command();
-		if (retcode == -1)
-			errx(EXIT_FAILURE, "Inner error!\n");
-		if (retcode == 1)
-			return;
-	}
+	int retcode;
+	retcode = run_command();
+	if (retcode == -1)
+		errx(EXIT_FAILURE, "Inner error!\n");
+	if (retcode == -2)
+		warnx("Lexical syntax error!\n");
+	if (retcode == -3)
+		warnx("Syntactic syntax error!\n");
+	//exit
+	if(retcode == 1)
+		return;
+}
+
+void 
+loop_command()
+{
+	char commandtext[MAX_COMMANDTEXT_SIZE];	
+	while (fgets(commandtext, MAX_COMMANDTEXT_SIZE, stdin) != NULL)
+		run_onecommand();
 	if (ferror(stdin))
 		errx(EXIT_FAILURE, "Inputs command error!\n");
 	return;
