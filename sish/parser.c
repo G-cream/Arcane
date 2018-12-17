@@ -7,6 +7,10 @@ initialize_parser(struct parser *commandparser, struct commandlist *commands)
 		return false;
 	(void)memset(commandparser, 0, sizeof(struct parser));
 	commandparser->commands = commands;
+	commandparser->currentcommand = &commands->comlist[0];
+	commandparser->currenttoken = &commandparser->currentcommand->tokens[0];
+	commandparser->currentcharacter = &commandparser->currenttoken->content[0];
+	commandparser->state = PLAINSTATE;
 	return true;
 }
 
@@ -29,7 +33,7 @@ bool
 lexical_analysis(struct parser *commandparser, const char *commandtext)
 {
 	size_t textlen;
-	commandparser->state = PLAINSTATE;
+	commandparser->state = SPSTATE;
 	textlen = strlen(commandtext);
 	for (size_t n = 0; n != textlen; ++n) {
 		if (is_plaintext(commandtext[n])) {
@@ -43,6 +47,8 @@ lexical_analysis(struct parser *commandparser, const char *commandtext)
 		if (is_controlop(commandtext[n])) {
 			if (!flushopbuffer(commandparser))
 				return false;
+			if (commandparser->state == PLAINSTATE)
+				++commandparser->currentcommand->tokennum;
 			if (!set_currentctrop(commandparser, commandtext[n]))
 				return false;
 			commandparser->state = CTROPSTATE;
@@ -51,9 +57,9 @@ lexical_analysis(struct parser *commandparser, const char *commandtext)
 		if (is_singlecommonop(commandtext[n])) {
 			if (!flushopbuffer(commandparser))
 				return false;
-			if (!set_currentctrop(commandparser, commandtext[n]))
+			if (!set_currentsinglecomop(commandparser, commandtext[n]))
 				return false;
-			commandparser->state = CTROPSTATE;
+			commandparser->state = S_COMOPSTATE;
 			continue;
 		}
 		if (is_doublecommonop(commandtext[n])) {
@@ -72,10 +78,16 @@ lexical_analysis(struct parser *commandparser, const char *commandtext)
 		}
 		if (is_seperator(commandtext[n])) {
 			if (commandparser->state != SPSTATE) {
-				if (!flushopbuffer(commandparser))
-					return false;
-				if (!set_nexttoken(commandparser))
-					return false;
+				if (commandparser->state == D_COMOPSTATE ||
+					commandparser->state == S_COMOPSTATE) {
+					if (!flushopbuffer(commandparser))
+						return false;
+				}
+				else {
+					if (commandparser->state != CTROPSTATE)
+						if (!set_nexttoken(commandparser))
+							return false;
+				}
 			}
 			commandparser->state = SPSTATE;
 			continue;
@@ -120,7 +132,7 @@ is_plaintext(char c)
 		return false;
 	if (is_controlop(c) || 
 		is_singlecommonop(c) || 
-		is_singlecommonop(c) || 
+		is_doublecommonop(c) || 
 		is_seperator(c))
 		return false;
 	return true;
@@ -189,6 +201,8 @@ get_singlecommontype(char c)
 	switch (c) {
 	case '<':
 		return RDFROMFILE;
+	case '>':
+		return RDTOFILE;
 	default:
 		return NOCOMOP;
 	}
@@ -205,9 +219,18 @@ get_doublecommontype(const char *buffer)
 }
 
 bool
+set_currentsinglecomop(struct parser *commandparser, char c)
+{
+	commandparser->currenttoken->comop = get_singlecommontype(c);
+	if (!set_nexttoken(commandparser))
+		return false;
+	return true;
+}
+
+bool
 set_currentctrop(struct parser *commandparser, char c)
 {
-	commandparser->currentcommand->ctrop = get_ctroptype(c);
+	commandparser->currentcommand->ctrop = get_ctroptype(c);	
 	if (!set_nextcommand(commandparser))
 		return false;
 	return true;
@@ -228,7 +251,7 @@ set_nexttoken(struct parser *commandparser)
 
 bool 
 set_nextcommand(struct parser *commandparser)
-{
+{	
 	++commandparser->commandindex;
 	if (commandparser->commandindex > MAX_COMMAND_SIZE)
 		return false;
@@ -245,9 +268,11 @@ bool
 flushopbuffer(struct parser *commandparser)
 {
 	commonop_type type;
-	if (commandparser->state == S_COMOPSTATE)	
+	if (commandparser->opbufferlen == 0)
+		return true;
+	if (commandparser->opbufferlen == 1)	
 		type = get_singlecommontype(commandparser->opbuffer[0]);
-	if (commandparser->state == D_COMOPSTATE)
+	if (commandparser->opbufferlen == 2)
 		type = get_doublecommontype(commandparser->opbuffer);
 	commandparser->currenttoken->comop = type;
 	commandparser->opbufferlen = 0;

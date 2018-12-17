@@ -76,6 +76,7 @@ commonop_type get_singlecommontype(char);
 commonop_type get_doublecommontype(const char *);
 bool write_currenttoken(struct parser *, char);
 bool set_currentctrop(struct parser *, char);
+bool set_currentsinglecomop(struct parser *, char);
 bool set_nexttoken(struct parser *);
 bool set_nextcommand(struct parser *);
 bool flushopbuffer(struct parser *);
