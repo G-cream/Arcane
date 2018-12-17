@@ -39,7 +39,7 @@ main(int argc, char **argv)
 		run_onecommand();
 	else
 		loop_command();
-	return EXIT_SUCCESS;
+	return CONFIG.exitcode;
 }
 
 void 
