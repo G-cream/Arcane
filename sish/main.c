@@ -61,16 +61,18 @@ run_onecommand()
 void 
 loop_command()
 {
-	char commandtext[MAX_COMMANDTEXT_SIZE];	
-	while (fgets(commandtext, MAX_COMMANDTEXT_SIZE, stdin) != NULL) {
+	for (;;) {
+		printf("%s  ", PROMPT);
+		if (fgets(CONFIG.commandtext, MAX_COMMANDTEXT_SIZE, stdin) == NULL)
+			break;
 		int retcode;
 		retcode = run_command();
 		if (retcode == -1)
 			errx(127, "Inner error!\n");
 		if (retcode == -2)
-			warnx("Lexical syntax error!\n");
+			warnx("Lexical syntax error!");
 		if (retcode == -3)
-			warnx("Syntactic syntax error!\n");
+			warnx("Syntactic syntax error!");
 		//exit
 		if(retcode == 1)
 			return;

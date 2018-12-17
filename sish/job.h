@@ -11,7 +11,7 @@ struct job {
 };
 
 bool add_process(struct process);
-bool cat_processes();
+//bool cat_processes();
 bool exe_processes();
 void start_pipeline();
 void run_pipeline();

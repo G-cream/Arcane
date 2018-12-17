@@ -10,7 +10,7 @@ initialize_parser(struct parser *commandparser, struct commandlist *commands)
 	commandparser->currentcommand = &commands->comlist[0];
 	commandparser->currenttoken = &commandparser->currentcommand->tokens[0];
 	commandparser->currentcharacter = &commandparser->currenttoken->content[0];
-	commandparser->state = PLAINSTATE;
+	commandparser->state = SPSTATE;
 	return true;
 }
 
@@ -37,7 +37,7 @@ lexical_analysis(struct parser *commandparser, const char *commandtext)
 	textlen = strlen(commandtext);
 	for (size_t n = 0; n != textlen; ++n) {
 		if (is_plaintext(commandtext[n])) {
-			if (!flushopbuffer(commandparser))
+			if (!flush_opbuffer(commandparser))
 				return false;
 			if (!write_currenttoken(commandparser, commandtext[n]))
 				return false;
@@ -45,7 +45,7 @@ lexical_analysis(struct parser *commandparser, const char *commandtext)
 			continue;
 		}
 		if (is_controlop(commandtext[n])) {
-			if (!flushopbuffer(commandparser))
+			if (!flush_opbuffer(commandparser))
 				return false;
 			if (commandparser->state == PLAINSTATE)
 				++commandparser->currentcommand->tokennum;
@@ -55,7 +55,10 @@ lexical_analysis(struct parser *commandparser, const char *commandtext)
 			continue;
 		}
 		if (is_singlecommonop(commandtext[n])) {
-			if (!flushopbuffer(commandparser))
+			if (commandparser->state == PLAINSTATE)
+				if (!set_nexttoken(commandparser))
+					return false;
+			if (!flush_opbuffer(commandparser))
 				return false;
 			if (!set_currentsinglecomop(commandparser, commandtext[n]))
 				return false;
@@ -63,24 +66,26 @@ lexical_analysis(struct parser *commandparser, const char *commandtext)
 			continue;
 		}
 		if (is_doublecommonop(commandtext[n])) {
+			if (commandparser->state == PLAINSTATE)
+				if (!set_nexttoken(commandparser))
+					return false;
 			if (commandparser->state == D_COMOPSTATE) {
 				commandparser->opbuffer[1] = commandtext[n];
 				++commandparser->opbufferlen;
-				if (!flushopbuffer(commandparser))
+				if (!flush_opbuffer(commandparser))
 					return false;
 			}
 			else {
 				commandparser->opbuffer[0] = commandtext[n];
-				++commandparser->opbufferlen;				
+				++commandparser->opbufferlen;
 			}
 			commandparser->state = D_COMOPSTATE;
 			continue;
 		}
 		if (is_seperator(commandtext[n])) {
 			if (commandparser->state != SPSTATE) {
-				if (commandparser->state == D_COMOPSTATE ||
-					commandparser->state == S_COMOPSTATE) {
-					if (!flushopbuffer(commandparser))
+				if (commandparser->state == D_COMOPSTATE) {
+					if (!flush_opbuffer(commandparser))
 						return false;
 				}
 				else {
@@ -103,11 +108,11 @@ syntactic_analysis(struct parser *commandparser)
 	size_t commandnum, tokennum;
 	struct token *currenttoken, *pretoken, *nexttoken;
 	commandnum = commandparser->commands->commandnum;
-	for (int i = 0; i != commandnum; ++i) {
+	for (size_t i = 0; i != commandnum; ++i) {
 		tokennum = commandparser->commands->comlist[i].tokennum;
-		for (int n = 0; n != tokennum; ++n) {
+		for (size_t n = 0; n != tokennum; ++n) {
 			currenttoken = &commandparser->commands->comlist[i].tokens[n];
-			if (currenttoken->comop != NOCTROP) {
+			if (currenttoken->comop != NOCOMOP) {
 				if (n == tokennum - 1)
 					return false;
 				if (n != 0) {
@@ -115,7 +120,7 @@ syntactic_analysis(struct parser *commandparser)
 					if (is_digits(pretoken->content))
 						return false;
 					nexttoken = currenttoken + 1;
-					if (nexttoken->comop == NOCTROP)
+					if (nexttoken->comop != NOCOMOP)
 						return false;
 				}
 			}
@@ -126,9 +131,9 @@ syntactic_analysis(struct parser *commandparser)
 
 bool
 is_plaintext(char c)
-{
+{	
 	//cant be ' or " or `
-	if(strpbrk(&c, "`\'\"") != NULL)
+	if(strchr("`\'\"", c) != NULL)
 		return false;
 	if (is_controlop(c) || 
 		is_singlecommonop(c) || 
@@ -141,7 +146,7 @@ is_plaintext(char c)
 bool 
 is_controlop(char c)
 {
-	if (strpbrk(&c, "&|\n") == NULL)
+	if (strchr("&|\n", c) == NULL)
 		return false;
 	return true;
 }
@@ -149,7 +154,7 @@ is_controlop(char c)
 bool 
 is_singlecommonop(char c)
 {
-	if (strpbrk(&c, "<") == NULL)
+	if (strchr("<", c) == NULL)
 		return false;
 	return true;
 }
@@ -157,7 +162,7 @@ is_singlecommonop(char c)
 bool 
 is_doublecommonop(char c)
 {
-	if (strpbrk(&c, ">") == NULL)
+	if (strchr(">", c) == NULL)
 		return false;
 	return true;
 }
@@ -165,7 +170,7 @@ is_doublecommonop(char c)
 bool 
 is_seperator(char c)
 {
-	if (strpbrk(&c, " \t") == NULL)
+	if (strchr(" \t", c) == NULL)
 		return false;
 	return true;
 }
@@ -265,7 +270,7 @@ set_nextcommand(struct parser *commandparser)
 }
 
 bool 
-flushopbuffer(struct parser *commandparser)
+flush_opbuffer(struct parser *commandparser)
 {
 	commonop_type type;
 	if (commandparser->opbufferlen == 0)

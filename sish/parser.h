@@ -6,8 +6,8 @@
 
 #define MAX_OP_LEN 2
 
-typedef enum parsestate { 
-	PLAINSTATE = 1,
+typedef enum  parsestate { 
+	PLAINSTATE = 0,
 	CTROPSTATE,
 	S_COMOPSTATE,
 	D_COMOPSTATE,
@@ -16,7 +16,7 @@ typedef enum parsestate {
 }parsestate;
 
 typedef enum ctrop_type { 
-	NOCTROP = 1,
+	NOCTROP = 0,
 	NEWLINE,
 	PIPE,
 	AMPER,
@@ -24,7 +24,7 @@ typedef enum ctrop_type {
 }ctrop_type;
 
 typedef enum commonop_type { 
-	NOCOMOP = 1,
+	NOCOMOP = 0,
 	RDTOFILE,
 	APTOFILE,
 	RDFROMFILE
@@ -79,6 +79,6 @@ bool set_currentctrop(struct parser *, char);
 bool set_currentsinglecomop(struct parser *, char);
 bool set_nexttoken(struct parser *);
 bool set_nextcommand(struct parser *);
-bool flushopbuffer(struct parser *);
+bool flush_opbuffer(struct parser *);
 
 #endif // !_PARSER_

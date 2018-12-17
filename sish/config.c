@@ -7,8 +7,8 @@ set_command(char *command)
 {
 	if (command == NULL)
 		return false;
-	if (strlen(command) + 1 > MAX_COMMAND_SIZE)
+	if (strlen(command) + 1 > MAX_COMMANDTEXT_SIZE)
 		return false;
-	(void)strcpy(CONFIG.command, command);
+	(void)strcpy(CONFIG.commandtext, command);
 	return true;
 }
