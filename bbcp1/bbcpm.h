@@ -17,4 +17,4 @@
 void cat_path_name(char *, char *, char *);
 void usage(void);
 
-#endif // !_BBCPM_
+#endif

@@ -17,4 +17,4 @@ bool is_valid_reg(const char *);
 bool file_exists(const char *);
 bool file_same(const char *, const char *);
 
-#endif // !_UTIL_
+#endif
