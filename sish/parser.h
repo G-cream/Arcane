@@ -1,12 +1,16 @@
 #ifndef _PARSER_
 #define _PARSER_
 
-#include <stdbool.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
 #include "config.h"
 
+#define MAX_TOKEN_NUM 50
+#define MAX_COMMAND_NUM 15
 #define MAX_OP_LEN 2
 
-typedef enum  parsestate { 
+typedef enum parsestate { 
 	PLAINSTATE = 0,
 	CTROPSTATE,
 	S_COMOPSTATE,
@@ -43,12 +47,12 @@ struct command {
 };
 
 struct commandlist {
-	struct command comlist[MAX_COMMAND_SIZE];
+	struct command comlist[MAX_COMMAND_NUM];
 	size_t commandnum;
 };
 
 struct parser {
-	struct commandlist *commands;
+	struct commandlist *p_commlist;
 	size_t commandindex;
 	size_t tokenindex;
 	size_t characterindex;
@@ -60,25 +64,28 @@ struct parser {
 	parsestate state;
 };
 
-bool initialize_parser(struct parser *, struct commandlist *);
+int initialize_commandlist(struct commandlist *);
+int initialize_parser(struct parser *);
 int parse_command(struct parser *, const char *, struct commandlist *);
-bool lexical_analysis();
-bool syntactic_analysis();
-bool is_commonoptoken(struct token *);
-bool is_plaintext(char);
-bool is_controlop(char);
-bool is_singlecommonop(char);
-bool is_doublecommonop(char);
-bool is_seperator(char);
-bool is_digits(const char *);
+int lexical_analysis(struct parser *, const char *);
+int syntactic_analysis(struct parser *);
+int set_nextcharacter(struct parser *);
+int set_nexttoken(struct parser *);
+int set_nextcommand(struct parser *);
+int write_currentplaintext(struct parser *, char);
+int write_currentctrop(struct parser *, char);
+int write_currentsinglecomop(struct parser *, char);
+int flush_opbuffer(struct parser *);
+
+/* util functions */
+int is_plaintext(char);
+int is_controlop(char);
+int is_singlecommonop(char);
+int is_doublecommonop(char);
+int is_seperator(char);
+int is_digits(const char *);
 ctrop_type get_ctroptype(char);
 commonop_type get_singlecommontype(char);
 commonop_type get_doublecommontype(const char *);
-bool write_currenttoken(struct parser *, char);
-bool set_currentctrop(struct parser *, char);
-bool set_currentsinglecomop(struct parser *, char);
-bool set_nexttoken(struct parser *);
-bool set_nextcommand(struct parser *);
-bool flush_opbuffer(struct parser *);
 
-#endif // !_PARSER_
+#endif
